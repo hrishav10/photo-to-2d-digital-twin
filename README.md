@@ -21,7 +21,7 @@ Every photo produces **two** twins, side by side, plus the photo:
 The top shows the workflow as three steps — Upload,
 Calibrate, Generate — with the current step highlighted;
 the steps are progress only. The actions are the buttons
-under them: Upload photo, Calibrate, Generate. Each card
+in the top bar: Upload photo, Calibrate, Generate. Each card
 has an expand button and a menu (Download / Expand). The
 bottom bar shows the file name and the Export buttons
 (PNG for the twin, Blueprint for the drawing). Click any

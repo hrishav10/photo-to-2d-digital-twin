@@ -15,7 +15,9 @@
   @keyframes swap { from { opacity: 0; transform: scale(.995); } to { opacity: 1; transform: scale(1); } }
 
   /* top bar */
-  header.top { display: flex; align-items: center; padding: 18px 28px 6px; animation: fade .35s ease both; }
+  header.top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 18px 28px 6px; animation: fade .35s ease both; }
+  header.top .spacer { flex: 1; }
+  header.top .btn { padding: 9px 18px; }
   header.top h1 { font-size: 19px; margin: 0; font-weight: 650; letter-spacing: -.015em; }
 
   /* stepper */
@@ -30,10 +32,6 @@
   .step-line.done { background: #6d28d9; }
 
   /* action bar: the real buttons — the stepper is progress only */
-  .actions { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 16px 20px; animation: fade .35s .08s ease both; }
-  .actions .btn { font-size: 14px; padding: 11px 22px; }
-  .actions .btn:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
-
   /* cards */
   main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; padding: 0 28px; width: 100%; flex: 1; }
   @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } }
@@ -78,6 +76,7 @@
   .btn:active { transform: scale(.98); }
   .btn.primary { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; box-shadow: 0 4px 18px rgba(124, 58, 237, .3); }
   .btn.primary:hover { background: linear-gradient(135deg, #9d71f7, #7c3aed); }
+  .btn:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
   .btn svg { width: 15px; height: 15px; }
 
   /* calibrate panel */
@@ -119,6 +118,10 @@
 <body>
 <header class="top">
   <h1>Photo to 2D Digital Twin</h1>
+  <span class="spacer"></span>
+  <button class="btn primary" onclick="document.getElementById('photoFile').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>Upload photo</button>
+  <button class="btn" onclick="openPhotoCalib()">Calibrate</button>
+  <button class="btn primary" id="generateBtn" onclick="generateAction()">Generate</button>
 </header>
 
 <div class="steps">
@@ -127,12 +130,6 @@
   <span class="step" id="step2"><span class="n">2</span>Calibrate</span>
   <span class="step-line" id="line2"></span>
   <span class="step" id="step3"><span class="n">3</span>Generate</span>
-</div>
-
-<div class="actions">
-  <button class="btn primary" onclick="document.getElementById('photoFile').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>Upload photo</button>
-  <button class="btn" onclick="openPhotoCalib()">Calibrate</button>
-  <button class="btn primary" id="generateBtn" onclick="generateAction()">Generate</button>
 </div>
 
 <input type="file" id="photoFile" accept="image/*" style="display:none" onchange="uploadPhoto()">
