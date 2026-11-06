@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photo to 2D Digital Twin</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #111; color: #eee; }
+  header { padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0 8px 0 0; }
+  .badge { padding: 4px 10px; border-radius: 999px; font-size: 13px; background: #333; }
+  .badge.ok { background: #14532d; } .badge.bad { background: #7f1d1d; }
+  button, select, input { padding: 8px 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: #eee; cursor: pointer; }
+  button.primary { background: #2563eb; border-color: #2563eb; }
+  h2.section { font-size: 16px; margin: 16px 16px 8px; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px 16px; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  .window { background: #000; border: 1px solid #333; border-radius: 12px; overflow: hidden; }
+  .window h2 { font-size: 14px; margin: 0; padding: 10px 12px; background: #1a1a1a; }
+  .window h2 span { color: #9ca3af; font-weight: normal; }
+  .window img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: contain; background: #000; }
+  #twinImg, #photoTwinImg { aspect-ratio: auto; }
+  #calib, #photoCalib { display: none; margin: 0 16px 16px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 12px; }
+  canvas { max-width: 100%; cursor: crosshair; border: 1px solid #555; }
+  #msg { padding: 0 16px 12px; color: #a7f3d0; min-height: 1.2em; }
+  label { font-size: 13px; color: #9ca3af; }
+  .hint { font-size: 13px; color: #9ca3af; padding: 0 16px 12px; }
+  .controls { padding: 0 16px 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Photo to 2D Digital Twin</h1>
+  <span id="statusBadge" class="badge">checking…</span>
+  <label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> 100&nbsp;mm grid</label>
+</header>
+
+<div class="hint">
+  One photo + one A4 sheet (210 × 297 mm) in frame = a true top-down, measurable 2D twin.
+  Measure in the twin: pixels ÷ 5 = mm. For a whole room, set width/height to the room size in mm.
+</div>
+
+<!-- ================= PHOTO MODE ================= -->
+<h2 class="section">📷 Photo mode — upload a photo, get its twin in the other window</h2>
+<div class="controls">
+  <input type="file" id="photoFile" accept="image/*">
+  <button class="primary" onclick="uploadPhoto()">Upload photo</button>
+  <button onclick="openPhotoCalib()">Calibrate photo (click 4 corners)</button>
+  <button onclick="autoPhotoAruco()">Auto: ArUco markers</button>
+  <a href="/photo_twin.png"><button>Download photo twin PNG</button></a>
+</div>
+
+<main>
+  <section class="window">
+    <h2>① Your photo <span>— angled, as taken</span></h2>
+    <img id="photoImg" src="" alt="Upload a photo to see it here">
+  </section>
+  <section class="window">
+    <h2>② 2D twin <span>— top-down, 5 px/mm, measurable</span></h2>
+    <img id="photoTwinImg" src="" alt="The twin appears here after calibration">
+  </section>
+</main>
+
+<section id="photoCalib">
+  <h3 style="margin-top:0">Calibrate photo — click the 4 corners in order: top-left, top-right, bottom-right, bottom-left</h3>
+  <p>
+    <label>Width (mm) <input id="pwMm" type="number" value="210" style="width:90px"></label>
+    <label>Height (mm) <input id="phMm" type="number" value="297" style="width:90px"></label>
+    <button class="primary" onclick="applyPhotoCalib()">Apply — make twin</button>
+    <button onclick="closePhotoCalib()">Cancel</button>
+    <button onclick="clearPhotoClicks()">Clear clicks</button>
+  </p>
+  <canvas id="photoCanvas"></canvas>
+  <p id="photoClickInfo">Clicks: 0 / 4</p>
+</section>
+
+<!-- ================= LIVE MODE ================= -->
+<h2 class="section">🎥 Live mode — webcam feed, twin updates instantly</h2>
+<div class="controls">
+  <button class="primary" onclick="openCalib()">Calibrate live (click 4 corners)</button>
+  <button onclick="autoAruco()">Auto: ArUco markers</button>
+  <button onclick="resetCalib()">Reset live</button>
+  <a href="/snapshot_twin.png"><button>Download live twin PNG</button></a>
+</div>
+
+<main>
+  <section class="window">
+    <h2>① Live feed <span>— raw camera</span></h2>
+    <img src="/video_feed" alt="Live camera feed">
+  </section>
+  <section class="window">
+    <h2>② 2D twin <span>— top-down, live, 2 px/mm</span></h2>
+    <img id="twinImg" src="/twin_feed" alt="2D digital twin">
+  </section>
+</main>
+
+<section id="calib">
+  <h3 style="margin-top:0">Calibrate live — click the 4 corners in order: top-left, top-right, bottom-right, bottom-left</h3>
+  <p>
+    <label>Width (mm) <input id="wMm" type="number" value="210" style="width:90px"></label>
+    <label>Height (mm) <input id="hMm" type="number" value="297" style="width:90px"></label>
+    <label>px/mm <input id="ppm" type="number" value="2" step="0.5" style="width:70px"></label>
+    <button class="primary" onclick="applyCalib()">Apply calibration</button>
+    <button onclick="closeCalib()">Cancel</button>
+    <button onclick="clearClicks()">Clear clicks</button>
+  </p>
+  <canvas id="calibCanvas"></canvas>
+  <p id="clickInfo">Clicks: 0 / 4</p>
+</section>
+
+<div id="msg"></div>
+
+<script>
+let clicks = [], photoClicks = [];
+function showMsg(t) { document.getElementById('msg').textContent = t; }
+
+async function refreshStatus() {
+  const s = await (await fetch('/status')).json();
+  const b = document.getElementById('statusBadge');
+  const photo = s.photo_uploaded
+    ? (s.photo_calibrated ? ` · Photo twin ${s.photo_twin_px[0]}×${s.photo_twin_px[1]} px ✓` : ' · Photo uploaded, not calibrated')
+    : '';
+  if (!s.camera_ok) { b.textContent = 'No camera — photo mode still works' + photo; b.className = 'badge'; return; }
+  b.textContent = (s.calibrated ? `Live calibrated ✓ ${s.twin_px[0]}×${s.twin_px[1]} px` : 'Camera OK · Live not calibrated') + photo;
+  b.className = 'badge ' + (s.calibrated ? 'ok' : '');
+}
+refreshStatus(); setInterval(refreshStatus, 3000);
+
+// ---------- photo mode ----------
+async function uploadPhoto() {
+  const f = document.getElementById('photoFile').files[0];
+  if (!f) { showMsg('Choose a photo file first.'); return; }
+  const fd = new FormData(); fd.append('photo', f);
+  const r = await fetch('/upload_photo', { method: 'POST', body: fd });
+  const j = await r.json();
+  showMsg(j.message || j.error || 'Done');
+  if (j.ok) {
+    document.getElementById('photoImg').src = '/uploaded.jpg?t=' + Date.now();
+    document.getElementById('photoTwinImg').src = '';
+    refreshStatus();
+  }
+}
+
+function drawClicks(canvas, pts, infoId) {
+  const ctx = canvas.getContext('2d');
+  pts.forEach(([x, y], i) => {
+    ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fill();
+    ctx.fillStyle = 'white'; ctx.font = '20px sans-serif'; ctx.fillText(String(i + 1), x + 12, y);
+  });
+  document.getElementById(infoId).textContent = `Clicks: ${pts.length} / 4 — ${JSON.stringify(pts)}`;
+}
+
+async function openPhotoCalib() {
+  photoClicks = [];
+  const s = await (await fetch('/status')).json();
+  if (!s.photo_uploaded) { showMsg('Upload a photo first.'); return; }
+  document.getElementById('photoCalib').style.display = 'block';
+  const img = new Image();
+  img.onload = () => {
+    const c = document.getElementById('photoCanvas');
+    c.width = img.width; c.height = img.height;
+    c.getContext('2d').drawImage(img, 0, 0);
+    document.getElementById('photoClickInfo').textContent = 'Clicks: 0 / 4';
+  };
+  img.src = '/uploaded.jpg?t=' + Date.now();
+  document.getElementById('photoCalib').scrollIntoView();
+}
+function closePhotoCalib() { document.getElementById('photoCalib').style.display = 'none'; }
+function clearPhotoClicks() { photoClicks = []; openPhotoCalib(); }
+
+document.getElementById('photoCanvas').addEventListener('click', (e) => {
+  if (photoClicks.length >= 4) return;
+  const c = e.target, r = c.getBoundingClientRect();
+  const x = (e.clientX - r.left) * (c.width / r.width);
+  const y = (e.clientY - r.top) * (c.height / r.height);
+  photoClicks.push([Math.round(x), Math.round(y)]);
+  drawClicks(c, photoClicks, 'photoClickInfo');
+});
+
+async function applyPhotoCalib() {
+  if (photoClicks.length !== 4) { showMsg('Click exactly 4 corners first.'); return; }
+  const body = { points: photoClicks,
+    width_mm: +document.getElementById('pwMm').value,
+    height_mm: +document.getElementById('phMm').value, px_per_mm: 5 };
+  const r = await fetch('/photo_calibrate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  const j = await r.json();
+  showMsg(j.message || j.error || 'Done');
+  if (j.ok) {
+    document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + Date.now();
+    closePhotoCalib(); refreshStatus();
+  }
+}
+
+async function autoPhotoAruco() {
+  const body = { width_mm: +document.getElementById('pwMm').value,
+    height_mm: +document.getElementById('phMm').value, px_per_mm: 5 };
+  const r = await fetch('/photo_aruco', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  const j = await r.json();
+  showMsg(j.message || j.error || 'Done');
+  if (j.ok) { document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + Date.now(); refreshStatus(); }
+}
+
+// ---------- live mode ----------
+async function openCalib() {
+  clicks = [];
+  document.getElementById('calib').style.display = 'block';
+  const img = new Image();
+  img.onload = () => {
+    const c = document.getElementById('calibCanvas');
+    c.width = img.width; c.height = img.height;
+    c.getContext('2d').drawImage(img, 0, 0);
+    document.getElementById('clickInfo').textContent = 'Clicks: 0 / 4';
+  };
+  img.src = '/snapshot.jpg?t=' + Date.now();
+  document.getElementById('calib').scrollIntoView();
+}
+function closeCalib() { document.getElementById('calib').style.display = 'none'; }
+function clearClicks() { clicks = []; openCalib(); }
+
+document.getElementById('calibCanvas').addEventListener('click', (e) => {
+  if (clicks.length >= 4) return;
+  const c = e.target, r = c.getBoundingClientRect();
+  const x = (e.clientX - r.left) * (c.width / r.width);
+  const y = (e.clientY - r.top) * (c.height / r.height);
+  clicks.push([Math.round(x), Math.round(y)]);
+  drawClicks(c, clicks, 'clickInfo');
+});
+
+async function applyCalib() {
+  if (clicks.length !== 4) { showMsg('Click exactly 4 corners first.'); return; }
+  const body = { points: clicks,
+    width_mm: +document.getElementById('wMm').value,
+    height_mm: +document.getElementById('hMm').value,
+    px_per_mm: +document.getElementById('ppm').value };
+  const r = await fetch('/calibrate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  const j = await r.json();
+  showMsg(j.message || j.error || 'Done');
+  closeCalib(); refreshStatus();
+  const t = document.getElementById('twinImg'); t.src = '/twin_feed?t=' + Date.now();
+}
+
+async function autoAruco() {
+  const body = { width_mm: +document.getElementById('wMm').value,
+    height_mm: +document.getElementById('hMm').value, px_per_mm: 2 };
+  const r = await fetch('/calibrate_aruco', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  const j = await r.json();
+  showMsg(j.message || j.error || 'Done'); refreshStatus();
+  const t = document.getElementById('twinImg'); t.src = '/twin_feed?t=' + Date.now();
+}
+
+async function resetCalib() {
+  await fetch('/reset', { method: 'POST' });
+  showMsg('Live calibration cleared.'); refreshStatus();
+  const t = document.getElementById('twinImg'); t.src = '/twin_feed?t=' + Date.now();
+}
+
+async function toggleGrid() {
+  const v = document.getElementById('gridChk').checked;
+  await fetch('/toggle_grid', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ show_grid: v }) });
+}
+</script>
+</body>
+</html>

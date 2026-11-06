@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+calibration.json
+*.png
+*.jpg
+*.jpeg
+!*.md
+.DS_Store
