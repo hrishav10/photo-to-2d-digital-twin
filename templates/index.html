@@ -11,6 +11,8 @@
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   @keyframes pop { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: scale(1); } }
+  @keyframes pulse { 0% { box-shadow: 0 4px 20px rgba(124, 58, 237, .35); } 50% { box-shadow: 0 4px 28px rgba(124, 58, 237, .55); } 100% { box-shadow: 0 4px 20px rgba(124, 58, 237, .35); } }
+  @keyframes swap { from { opacity: 0; transform: scale(.995); } to { opacity: 1; transform: scale(1); } }
 
   /* top bar */
   header.top { display: flex; align-items: center; padding: 18px 28px 6px; animation: fade .35s ease both; }
@@ -18,24 +20,28 @@
 
   /* stepper */
   .steps { display: flex; align-items: center; justify-content: center; gap: 0; padding: 14px 16px 20px; animation: fade .35s .05s ease both; }
-  .step { display: inline-flex; align-items: center; gap: 9px; background: #14141f; border: 1px solid #262633; border-radius: 999px; padding: 9px 20px; font-size: 14px; font-weight: 550; color: #9a9aad; cursor: pointer; transition: background .2s ease, border-color .2s ease, color .2s ease, transform .12s ease; }
-  .step:active { transform: scale(.98); }
+  .step { display: inline-flex; align-items: center; gap: 9px; background: #14141f; border: 1px solid #262633; border-radius: 999px; padding: 9px 20px; font-size: 14px; font-weight: 550; color: #9a9aad; cursor: default; transition: background .25s ease, border-color .25s ease, color .25s ease; }
   .step .n { width: 24px; height: 24px; border-radius: 50%; background: #262633; color: #9a9aad; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 650; transition: background .2s ease, color .2s ease; flex: none; }
-  .step.active { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; box-shadow: 0 4px 20px rgba(124, 58, 237, .35); }
+  .step.active { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; animation: pulse 2.4s ease-in-out infinite; }
   .step.active .n { background: rgba(255,255,255,.22); color: #fff; }
   .step.done { border-color: #6d28d9; color: #c4b5fd; }
   .step.done .n { background: #6d28d9; color: #fff; }
   .step-line { width: 72px; height: 1px; background: #262633; flex: none; transition: background .2s ease; }
   .step-line.done { background: #6d28d9; }
 
+  /* action bar: the real buttons — the stepper is progress only */
+  .actions { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 16px 20px; animation: fade .35s .08s ease both; }
+  .actions .btn { font-size: 14px; padding: 11px 22px; }
+  .actions .btn:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+
   /* cards */
   main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; padding: 0 28px; width: 100%; flex: 1; }
   @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 720px) { main { grid-template-columns: 1fr; } header.top, main, .bottombar { padding-left: 14px; padding-right: 14px; } }
-  .card { background: #12121c; border: 1px solid #232332; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; animation: rise .45s cubic-bezier(.22,.61,.36,1) both; transition: border-color .2s ease; }
+  .card { background: #12121c; border: 1px solid #232332; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; animation: rise .45s cubic-bezier(.22,.61,.36,1) both; transition: border-color .2s ease, transform .2s ease; }
   .card:nth-child(2) { animation-delay: .06s; }
   .card:nth-child(3) { animation-delay: .12s; }
-  .card:hover { border-color: #34344a; }
+  .card:hover { border-color: #34344a; transform: translateY(-2px); }
   .card header { display: flex; align-items: center; gap: 8px; padding: 16px 18px 12px; }
   .card header h2 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
   .card header .meta { font-size: 12px; color: #8b8b99; }
@@ -46,6 +52,7 @@
   .card .body { padding: 0 14px 14px; flex: 1; display: flex; }
   .card .frame { flex: 1; background: #000; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 220px; position: relative; cursor: zoom-in; }
   .card .frame img { width: 100%; display: block; object-fit: contain; animation: fade .35s ease both; }
+  .card .frame img.swap { animation: swap .45s ease both; }
   .card .frame .empty { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; color: #8b8b99; font-size: 13px; cursor: pointer; }
   .card .frame .empty svg { width: 28px; height: 28px; color: #6d6d7d; }
   .card footer { padding: 0 18px 14px; font-size: 12px; color: #8b8b99; min-height: 30px; display: flex; align-items: center; gap: 8px; }
@@ -115,11 +122,17 @@
 </header>
 
 <div class="steps">
-  <button class="step active" id="step1" onclick="stepAction(1)"><span class="n">1</span>Upload</button>
+  <span class="step active" id="step1"><span class="n">1</span>Upload</span>
   <span class="step-line" id="line1"></span>
-  <button class="step" id="step2" onclick="stepAction(2)"><span class="n">2</span>Calibrate</button>
+  <span class="step" id="step2"><span class="n">2</span>Calibrate</span>
   <span class="step-line" id="line2"></span>
-  <button class="step" id="step3" onclick="stepAction(3)"><span class="n">3</span>Generate</button>
+  <span class="step" id="step3"><span class="n">3</span>Generate</span>
+</div>
+
+<div class="actions">
+  <button class="btn primary" onclick="document.getElementById('photoFile').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>Upload photo</button>
+  <button class="btn" onclick="openPhotoCalib()">Calibrate</button>
+  <button class="btn primary" id="generateBtn" onclick="generateAction()">Generate</button>
 </div>
 
 <input type="file" id="photoFile" accept="image/*" style="display:none" onchange="uploadPhoto()">
@@ -232,14 +245,13 @@ function setSteps(state) {
   });
   lines.forEach((el, i) => el.classList.toggle('done', i + 2 <= state));
 }
-function stepAction(n) {
-  if (n === 1) { document.getElementById('photoFile').click(); }
-  else if (n === 2) { openPhotoCalib(); }
-  else {
-    const need = refMode === 'a4' ? 4 : 6;
-    if (photoClicks.length === need) applyPhotoCalib();
-    else openPhotoCalib();
-  }
+function generateAction() {
+  const need = refMode === 'a4' ? 4 : 6;
+  if (photoClicks.length === need) applyPhotoCalib();
+  else openPhotoCalib();
+}
+function swapIn(el) {
+  el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap');
 }
 function toggleMenu(id, e) {
   e.stopPropagation();
@@ -295,6 +307,7 @@ async function uploadPhoto() {
     const img = document.getElementById('photoImg');
     img.src = '/uploaded.jpg?t=' + Date.now();
     img.style.display = '';
+    swapIn(img);
     document.getElementById('photoEmpty').style.display = 'none';
     document.getElementById('photoTwinImg').src = '';
     document.getElementById('photoBlueprintImg').src = '';
@@ -363,7 +376,7 @@ async function openPhotoCalib() {
     setRefMode();
   };
   img.src = '/uploaded.jpg?t=' + Date.now();
-  document.getElementById('calib').scrollIntoView();
+  document.getElementById('calib').scrollIntoView({ behavior: 'smooth' });
 }
 function closePhotoCalib() { document.getElementById('calib').style.display = 'none'; }
 function clearPhotoClicks() { photoClicks = []; document.getElementById('previewBox').innerHTML = ''; redrawCanvas(); }
@@ -423,6 +436,7 @@ function showResults(j) {
   const bp = document.getElementById('photoBlueprintImg');
   twin.src = '/photo_twin.jpg?t=' + t;
   bp.src = '/photo_blueprint.jpg?t=' + t;
+  swapIn(twin); swapIn(bp);
   twin.style.display = '';
   bp.style.display = '';
   document.getElementById('twinEmpty').style.display = 'none';
@@ -434,11 +448,17 @@ function showResults(j) {
 async function applyPhotoCalib() {
   const need = refMode === 'a4' ? 4 : 6;
   if (photoClicks.length !== need) { showMsg(`Select all ${need} points first.`); return; }
-  const { url, body } = calibBody();
-  const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-  const j = await r.json();
-  showMsg(j.message || j.error || 'Done.');
-  if (j.ok) { showResults(j); closePhotoCalib(); refreshStatus(); }
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  try {
+    const { url, body } = calibBody();
+    const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+    const j = await r.json();
+    showMsg(j.message || j.error || 'Done.');
+    if (j.ok) { showResults(j); closePhotoCalib(); refreshStatus(); }
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generate';
+  }
 }
 
 async function autoPhotoAruco() {

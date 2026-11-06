@@ -172,11 +172,15 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
         cv2.line(sheet, (0, y), (sheet.shape[1], y), BLUE_GRID, 1)
 
     # --- line drawing of the twin: edges in white ---
+    # Canny 25/75, no dilation: the keys are only slightly
+    # lighter than the black body (gradient ~40), so the
+    # first build's Canny 50/150 found 0 edge pixels in the
+    # key area and the key outlines were missing from the
+    # drawing. At 25/75 the keys draw as thin lines — the
+    # same edge tracing, just with the lines actually there.
     gray = cv2.cvtColor(twin, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(gray, 50, 150)
-    # keep only strong, object-like edges: dilate slightly so lines read
-    edges = cv2.dilate(edges, np.ones((2, 2), np.uint8), iterations=1)
+    edges = cv2.Canny(gray, 25, 75)
     sheet[oy:oy + th, ox:ox + tw][edges > 0] = WHITE
 
     # --- object outline + inner parts ---

@@ -20,11 +20,13 @@ Every photo produces **two** twins, side by side, plus the photo:
 
 The top shows the workflow as three steps — Upload,
 Calibrate, Generate — with the current step highlighted;
-click a step to go there. Each card has an expand button
-and a menu (Download / Expand). The bottom bar shows the
-file name and the Export buttons (PNG for the twin,
-Blueprint for the drawing). Click any card image to open
-it big. Close with X, Esc, or clicking outside.
+the steps are progress only. The actions are the buttons
+under them: Upload photo, Calibrate, Generate. Each card
+has an expand button and a menu (Download / Expand). The
+bottom bar shows the file name and the Export buttons
+(PNG for the twin, Blueprint for the drawing). Click any
+card image to open it big. Close with X, Esc, or clicking
+outside.
 
 The dimensions are real: the object's width/height are measured
 from its outline in the twin, using the homography scale
@@ -82,6 +84,16 @@ body, so no key edge was ever found and the drawing came
 out with scattered fragments instead of the key grid.
 The whole body itself is also skipped as a part, so it no
 longer gets drawn twice on top of the outline.
+
+## The edge drawing shows every line
+
+The blueprint's line drawing runs Canny 25/75 with no
+dilation. The keys are only slightly lighter than the
+black body, so the first build's Canny 50/150 found no
+key edges at all and the key outlines were missing. At
+25/75 the keys draw as thin lines — the same edge
+tracing, with the lines actually there. No rectangles
+are added: the lines are the traced edges.
 
 ## The outline is the measured rectangle
 
