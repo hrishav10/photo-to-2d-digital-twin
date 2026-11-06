@@ -16,10 +16,11 @@ and height are measured from its largest contour in the twin.
 
 Usage:
     from blueprint import make_blueprint
-    sheet, info = make_blueprint(twin, 210, 297, 5.0, title="CALCULATOR")
+    sheet, info = make_blueprint(twin, 210, 297, 5.0, title="SUBMARINE")
     # info = {"object_w_mm": ..., "object_h_mm": ..., "object_px": (x,y,w,h)}
 """
 import datetime
+import html
 
 import cv2
 import numpy as np
@@ -141,8 +142,124 @@ def _dim_v(img, y0, y1, x, label, color=CYAN):
     img[max(0, y):y + th2, x - tw2 // 2:x - tw2 // 2 + tw2] = txt
 
 
+def _find_object_polygon(twin):
+    """Largest contour, approximated to a polygon, in twin px coords.
+    Returns a list of (x, y) or None."""
+    gray = cv2.cvtColor(twin, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    _, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    contours, _ = cv2.findContours(255 - bw, cv2.RETR_EXTERNAL,
+                                   cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return None
+    h, w = gray.shape
+    sheet_area = h * w
+    candidates = [c for c in contours
+                  if 0.02 * sheet_area < cv2.contourArea(c) < 0.98 * sheet_area]
+    if not candidates:
+        return None
+    cnt = max(candidates, key=cv2.contourArea)
+    approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+    return [(int(p[0][0]), int(p[0][1])) for p in approx.reshape(-1, 1, 2)]
+
+
+def make_blueprint_svg(twin, width_mm, height_mm, px_per_mm,
+                       title="OBJECT"):
+    """Same blueprint as make_blueprint(), but as interactive SVG.
+
+    Every part is a <polygon>/<rect class="part"> with data-*
+    attributes in real mm, so the browser can click / hover it,
+    show its size, and measure between points. Groups are
+    #bp-grid, #bp-drawing, #bp-dims, #bp-centre, #bp-title so the
+    UI can toggle layers. Returns (svg_string, info_dict).
+    """
+    if not title:
+        title = "OBJECT"
+    th, tw = twin.shape[:2]
+    mx, my, bottom = 90, 90, 90
+    sw, sh = tw + mx + 70, th + my + bottom
+    ox, oy = mx, my
+    obj = _find_object_rect(twin)
+    if obj is None:
+        obj = (0, 0, tw, th)
+    x, y, w, h = obj
+    obj_w_mm = w / px_per_mm
+    obj_h_mm = h / px_per_mm
+    poly = _find_object_polygon(twin)
+    if not poly:
+        poly = [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
+    poly_pts = " ".join(f"{ox + px},{oy + py}" for px, py in poly)
+    cx, cy = ox + x + w // 2, oy + y + h // 2
+    today = datetime.date.today().isoformat()
+    esc_title = html.escape(str(title).upper())
+
+    def mm(v):
+        return v / px_per_mm
+
+    parts = []
+    parts.append(
+        f'<polygon class="part main" data-name="{esc_title}" '
+        f'data-w-mm="{obj_w_mm:.1f}" data-h-mm="{obj_h_mm:.1f}" '
+        f'data-x-mm="{mm(x):.1f}" data-y-mm="{mm(y):.1f}" '
+        f'points="{poly_pts}" fill="none" stroke="#fff" stroke-width="3"/>')
+    for i, (ix, iy, iw, ih) in enumerate(_inner_rects(twin)):
+        parts.append(
+            f'<rect class="part inner" data-name="Part {i + 1}" '
+            f'data-w-mm="{mm(iw):.1f}" data-h-mm="{mm(ih):.1f}" '
+            f'data-x-mm="{mm(ix):.1f}" data-y-mm="{mm(iy):.1f}" '
+            f'x="{ox + ix}" y="{oy + iy}" width="{iw}" height="{ih}" '
+            f'fill="rgba(255,255,255,0.06)" stroke="#8ec8ff" stroke-width="1"/>')
+
+    grid = []
+    step = max(1, int(round(10 * px_per_mm)))
+    for gx in range(0, sw, step):
+        grid.append(f'<line x1="{gx}" y1="0" x2="{gx}" y2="{sh}" stroke="#123a6e" stroke-width="1"/>')
+    for gy in range(0, sh, step):
+        grid.append(f'<line x1="0" y1="{gy}" x2="{sw}" y2="{gy}" stroke="#123a6e" stroke-width="1"/>')
+
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {sw} {sh}" width="100%" data-px-per-mm="{px_per_mm:g}">
+<defs><marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#00dcff"/></marker></defs>
+<rect width="{sw}" height="{sh}" fill="#0a2e6e"/>
+<g id="bp-grid">{''.join(grid)}</g>
+<g id="bp-viewport">
+<g id="bp-drawing">{''.join(parts)}</g>
+<g id="bp-centre" stroke="#c8c8c8" stroke-width="1" stroke-dasharray="14 10">
+<line x1="{ox + x - 30}" y1="{cy}" x2="{ox + x + w + 30}" y2="{cy}"/>
+<line x1="{cx}" y1="{oy + y - 30}" x2="{cx}" y2="{oy + y + h + 30}"/>
+</g>
+<g id="bp-dims" stroke="#00dcff" fill="#00dcff" font-family="sans-serif" font-size="22">
+<line x1="{ox + x}" y1="{my - 40}" x2="{ox + x + w}" y2="{my - 40}" stroke-width="2" marker-start="url(#arr)" marker-end="url(#arr)"/>
+<line x1="{ox + x}" y1="{oy + y}" x2="{ox + x}" y2="{my - 55}" stroke-width="1"/>
+<line x1="{ox + x + w}" y1="{oy + y}" x2="{ox + x + w}" y2="{my - 55}" stroke-width="1"/>
+<text x="{(2 * ox + 2 * x + w) // 2}" y="{my - 48}" text-anchor="middle" stroke="none">{obj_w_mm:.0f} mm</text>
+<line x1="{mx - 40}" y1="{oy + y}" x2="{mx - 40}" y2="{oy + y + h}" stroke-width="2" marker-start="url(#arr)" marker-end="url(#arr)"/>
+<line x1="{ox + x}" y1="{oy + y}" x2="{mx - 55}" y2="{oy + y}" stroke-width="1"/>
+<line x1="{ox + x}" y1="{oy + y + h}" x2="{mx - 55}" y2="{oy + y + h}" stroke-width="1"/>
+<text x="{mx - 48}" y="{(2 * oy + 2 * y + h) // 2}" text-anchor="middle" stroke="none" transform="rotate(-90 {mx - 48} {(2 * oy + 2 * y + h) // 2})">{obj_h_mm:.0f} mm</text>
+</g>
+</g>
+<g id="bp-title">
+<rect x="8" y="8" width="{sw - 16}" height="{sh - 16}" fill="none" stroke="#fff" stroke-width="2"/>
+<line x1="8" y1="{sh - bottom + 4}" x2="{sw - 8}" y2="{sh - bottom + 4}" stroke="#fff" stroke-width="2"/>
+<text x="24" y="{sh - bottom + 34}" fill="#fff" font-family="sans-serif" font-size="26" font-weight="bold">{esc_title} — TOP VIEW</text>
+<text x="24" y="{sh - bottom + 64}" fill="#00dcff" font-family="sans-serif" font-size="18">REF {width_mm:.0f} x {height_mm:.0f} mm  |  SCALE {px_per_mm:g} px/mm  |  GRID 10 mm  |  {today}</text>
+<text x="{sw - 190}" y="{sh - bottom + 34}" fill="#00dcff" font-family="sans-serif" font-size="26" font-weight="bold">BLUEPRINT</text>
+</g>
+</svg>'''
+    info = {
+        "object_w_mm": round(obj_w_mm, 1),
+        "object_h_mm": round(obj_h_mm, 1),
+        "object_px": [int(v) for v in obj],
+        "sheet_px": [int(sw), int(sh)],
+        "ref_w_mm": width_mm,
+        "ref_h_mm": height_mm,
+        "px_per_mm": px_per_mm,
+    }
+    return svg, info
+
+
 def make_blueprint(twin, width_mm, height_mm, px_per_mm,
-                   title="CALCULATOR"):
+                   title="OBJECT"):
     """twin (BGR) -> (blueprint sheet (BGR), info dict).
 
     The sheet is the twin plus margins: 90 px left/top for the

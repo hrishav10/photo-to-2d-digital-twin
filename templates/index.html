@@ -3,77 +3,115 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Photo to 2D Digital Twin</title>
+<title>Photo to 2D Digital Twin — Blueprint</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 0; background: #111; color: #eee; }
   header { padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   header h1 { font-size: 18px; margin: 0 8px 0 0; }
   .badge { padding: 4px 10px; border-radius: 999px; font-size: 13px; background: #333; }
-  .badge.ok { background: #14532d; } .badge.bad { background: #7f1d1d; }
+  .badge.ok { background: #14532d; }
   button, select, input { padding: 8px 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: #eee; cursor: pointer; }
   button.primary { background: #2563eb; border-color: #2563eb; }
+  button.active { background: #0e7490; border-color: #0e7490; }
   h2.section { font-size: 16px; margin: 16px 16px 8px; }
-  main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px 16px; }
-  main.three { grid-template-columns: 1fr 1fr 1fr; }
-  @media (max-width: 1100px) { main.three { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 800px) { main, main.three { grid-template-columns: 1fr; } }
-  .window { background: #000; border: 1px solid #333; border-radius: 12px; overflow: hidden; }
-  .window h2 { font-size: 14px; margin: 0; padding: 10px 12px; background: #1a1a1a; }
+  main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 0 16px 16px; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  .window { background: #000; border: 1px solid #333; border-radius: 12px; overflow: hidden; position: relative; }
+  .window h2 { font-size: 14px; margin: 0; padding: 10px 12px; background: #1a1a1a; display: flex; justify-content: space-between; align-items: center; }
   .window h2 span { color: #9ca3af; font-weight: normal; }
-  .window img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: contain; background: #000; }
-  #twinImg, #photoTwinImg, #photoBlueprintImg, #twinBlueprintImg { aspect-ratio: auto; }
-  #calib, #photoCalib { display: none; margin: 0 16px 16px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 12px; }
+  .expand { background: none; border: 1px solid #555; padding: 2px 8px; font-size: 14px; }
+  .window img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: contain; background: #000; cursor: zoom-in; }
+  #photoTwinImg { aspect-ratio: auto; }
+  #blueprintBox { width: 100%; background: #0a2e6e; cursor: grab; min-height: 200px; }
+  #blueprintBox svg { display: block; width: 100%; height: auto; }
+  #blueprintBox svg .part { cursor: pointer; }
+  #blueprintBox svg .part:hover { fill: rgba(255, 220, 0, 0.3); stroke: #ffdc00; }
+  #blueprintBox svg .part.selected { fill: rgba(255, 220, 0, 0.35); stroke: #ffdc00; stroke-width: 3; }
+  #calib { display: none; margin: 0 16px 16px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 12px; }
   canvas { max-width: 100%; cursor: crosshair; border: 1px solid #555; }
   #msg { padding: 0 16px 12px; color: #a7f3d0; min-height: 1.2em; }
+  #bpInfo { padding: 0 16px 12px; color: #fde68a; min-height: 1.2em; }
   label { font-size: 13px; color: #9ca3af; }
   .hint { font-size: 13px; color: #9ca3af; padding: 0 16px 12px; }
-  .controls { padding: 0 16px 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .controls, .bp-tools { padding: 0 16px 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .bp-tools { background: #1a1a1a; margin: 0 16px 12px; border-radius: 12px; padding: 10px 12px; }
+  /* lightbox: click any window to see it big, X / Esc / outside to close */
+  #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 100; padding: 24px; box-sizing: border-box; overflow: auto; }
+  #lightbox.open { display: block; }
+  #lightbox .lb-inner { max-width: 1400px; margin: 0 auto; background: #000; border: 1px solid #444; border-radius: 12px; overflow: hidden; }
+  #lightbox .lb-inner img, #lightbox .lb-inner svg { width: 100%; display: block; }
+  #lbClose { position: fixed; top: 12px; right: 16px; z-index: 101; font-size: 20px; padding: 8px 14px; }
+  #lbTitle { color: #eee; text-align: center; padding: 8px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Photo to 2D Digital Twin</h1>
+  <h1>Photo to 2D Digital Twin — Blueprint</h1>
   <span id="statusBadge" class="badge">checking…</span>
-  <label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> 100&nbsp;mm grid</label>
+  <label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> 100&nbsp;mm grid on real twin</label>
 </header>
 
 <div class="hint">
-  One photo + one A4 sheet (210 × 297 mm) in frame = a true top-down, measurable 2D twin.
-  Measure in the twin: pixels ÷ 5 = mm. For a whole room, set width/height to the room size in mm.
+  One photo + a known reference = a true top-down, measurable twin + a game-style blueprint.
+  Small object: use an A4 sheet (210 × 297 mm). Big object that won't fit on A4: put a 30 cm scale beside it instead.
+  Click any window to open it big — X, Esc, or click outside to close it.
 </div>
 
-<!-- ================= PHOTO MODE ================= -->
-<h2 class="section">📷 Photo mode — upload a photo, get the real twin + the blueprint</h2>
+<h2 class="section">📷 Photo mode — upload a photo, get the real twin + the interactive blueprint</h2>
 <div class="controls">
   <input type="file" id="photoFile" accept="image/*">
   <button class="primary" onclick="uploadPhoto()">Upload photo</button>
-  <button onclick="openPhotoCalib()">Calibrate photo (click 4 corners)</button>
-  <button onclick="autoPhotoAruco()">Auto: ArUco markers</button>
-  <label>Object name <input id="photoTitle" type="text" value="CALCULATOR" style="width:130px"></label>
+  <button onclick="openPhotoCalib()">Calibrate (click corners)</button>
+  <label>Object name <input id="photoTitle" type="text" value="" placeholder="e.g. SUBMARINE" style="width:150px"></label>
   <a href="/photo_twin.png"><button>Download real twin PNG</button></a>
   <a href="/photo_blueprint.png"><button>Download blueprint PNG</button></a>
+  <a href="/photo_blueprint.svg" download="blueprint.svg"><button>Download blueprint SVG</button></a>
 </div>
 
-<main class="three">
-  <section class="window">
-    <h2>① Your photo <span>— angled, as taken</span></h2>
-    <img id="photoImg" src="" alt="Upload a photo to see it here">
+<main>
+  <section class="window" data-title="Your photo">
+    <h2>① Your photo <span>— angled, as taken</span> <button class="expand" onclick="openLightbox('photo')">⛶</button></h2>
+    <img id="photoImg" src="" alt="Upload a photo to see it here" onclick="openLightbox('photo')">
   </section>
-  <section class="window">
-    <h2>② Real twin <span>— top-down photo, 5 px/mm</span></h2>
-    <img id="photoTwinImg" src="" alt="The twin appears here after calibration">
+  <section class="window" data-title="Real twin">
+    <h2>② Real twin <span>— top-down photo, 5 px/mm</span> <button class="expand" onclick="openLightbox('twin')">⛶</button></h2>
+    <img id="photoTwinImg" src="" alt="The twin appears here after calibration" onclick="openLightbox('twin')">
   </section>
-  <section class="window">
-    <h2>③ Blueprint <span>— blue, dimensioned in mm</span></h2>
-    <img id="photoBlueprintImg" src="" alt="The blueprint appears here after calibration">
+  <section class="window" data-title="Blueprint">
+    <h2>③ Blueprint <span>— interactive, dimensioned</span> <button class="expand" onclick="openLightbox('blueprint')">⛶</button></h2>
+    <div id="blueprintBox" onclick="event.stopPropagation()"><p style="padding:16px;color:#9ca3af">The blueprint appears here after calibration. Click a part to see its size.</p></div>
   </section>
 </main>
 
-<section id="photoCalib">
-  <h3 style="margin-top:0">Calibrate photo — click the 4 corners in order: top-left, top-right, bottom-right, bottom-left</h3>
+<div class="bp-tools">
+  <strong>Blueprint tools:</strong>
+  <button onclick="bpZoom(1.25)">＋ Zoom in</button>
+  <button onclick="bpZoom(0.8)">－ Zoom out</button>
+  <button onclick="bpResetView()">Reset view</button>
+  <button id="measureBtn" onclick="toggleMeasure()">📏 Measure: off</button>
+  <label><input type="checkbox" checked onchange="toggleLayer('bp-grid', this.checked)"> Grid</label>
+  <label><input type="checkbox" checked onchange="toggleLayer('bp-dims', this.checked)"> Dimensions</label>
+  <label><input type="checkbox" checked onchange="toggleLayer('bp-centre', this.checked)"> Centre lines</label>
+  <label><input type="checkbox" checked onchange="toggleLayer('bp-title', this.checked)"> Title block</label>
+</div>
+<div id="bpInfo">Click a part in the blueprint to see its size. Click 📏 Measure, then click two points to measure the distance between them.</div>
+
+<section id="calib">
+  <h3 style="margin-top:0">Calibrate — click in order</h3>
   <p>
+    <label><input type="radio" name="refMode" value="a4" checked onchange="setRefMode()"> A4 sheet (210 × 297 mm) — click its 4 corners</label><br>
+    <label><input type="radio" name="refMode" value="scale" onchange="setRefMode()"> 30 cm scale — click the object's 4 corners, then the scale's 2 ends (0 cm and 30 cm)</label>
+  </p>
+  <p id="refFieldsA4">
     <label>Width (mm) <input id="pwMm" type="number" value="210" style="width:90px"></label>
     <label>Height (mm) <input id="phMm" type="number" value="297" style="width:90px"></label>
+  </p>
+  <p id="refFieldsScale" style="display:none">
+    <label>Scale length (mm) <input id="rulerMm" type="number" value="300" style="width:90px"></label>
+    <span style="color:#9ca3af">Place the scale flat beside the object, in the same plane, fully in frame.</span>
+  </p>
+  <p>
     <button class="primary" onclick="applyPhotoCalib()">Apply — make twin + blueprint</button>
     <button onclick="closePhotoCalib()">Cancel</button>
     <button onclick="clearPhotoClicks()">Clear clicks</button>
@@ -82,61 +120,56 @@
   <p id="photoClickInfo">Clicks: 0 / 4</p>
 </section>
 
-<!-- ================= LIVE MODE ================= -->
-<h2 class="section">🎥 Live mode — webcam feed, twin updates instantly</h2>
-<div class="controls">
-  <button class="primary" onclick="openCalib()">Calibrate live (click 4 corners)</button>
-  <button onclick="autoAruco()">Auto: ArUco markers</button>
-  <button onclick="resetCalib()">Reset live</button>
-  <a href="/snapshot_twin.png"><button>Download live twin PNG</button></a>
-</div>
-
-<main class="three">
-  <section class="window">
-    <h2>① Live feed <span>— raw camera</span></h2>
-    <img src="/video_feed" alt="Live camera feed">
-  </section>
-  <section class="window">
-    <h2>② 2D twin <span>— top-down, live, 2 px/mm</span></h2>
-    <img id="twinImg" src="/twin_feed" alt="2D digital twin">
-  </section>
-  <section class="window">
-    <h2>③ Blueprint <span>— live, dimensioned</span></h2>
-    <img id="twinBlueprintImg" src="/twin_blueprint_feed" alt="Live blueprint">
-  </section>
-</main>
-
-<section id="calib">
-  <h3 style="margin-top:0">Calibrate live — click the 4 corners in order: top-left, top-right, bottom-right, bottom-left</h3>
-  <p>
-    <label>Width (mm) <input id="wMm" type="number" value="210" style="width:90px"></label>
-    <label>Height (mm) <input id="hMm" type="number" value="297" style="width:90px"></label>
-    <label>px/mm <input id="ppm" type="number" value="2" step="0.5" style="width:70px"></label>
-    <button class="primary" onclick="applyCalib()">Apply calibration</button>
-    <button onclick="closeCalib()">Cancel</button>
-    <button onclick="clearClicks()">Clear clicks</button>
-  </p>
-  <canvas id="calibCanvas"></canvas>
-  <p id="clickInfo">Clicks: 0 / 4</p>
-</section>
-
 <div id="msg"></div>
 
+<div id="lightbox" onclick="if(event.target===this) closeLightbox()">
+  <button id="lbClose" onclick="closeLightbox()">✕ Close</button>
+  <div id="lbTitle"></div>
+  <div class="lb-inner" id="lbInner"></div>
+</div>
+
 <script>
-let clicks = [], photoClicks = [];
+let photoClicks = [];
+let refMode = 'a4';
+let bpPxPerMm = 5, bpScale = 1, bpTx = 0, bpTy = 0, measureOn = false, measurePts = [];
 function showMsg(t) { document.getElementById('msg').textContent = t; }
 
 async function refreshStatus() {
   const s = await (await fetch('/status')).json();
   const b = document.getElementById('statusBadge');
-  const photo = s.photo_uploaded
-    ? (s.photo_calibrated ? ` · Photo twin ${s.photo_twin_px[0]}×${s.photo_twin_px[1]} px ✓` : ' · Photo uploaded, not calibrated')
-    : '';
-  if (!s.camera_ok) { b.textContent = 'No camera — photo mode still works' + photo; b.className = 'badge'; return; }
-  b.textContent = (s.calibrated ? `Live calibrated ✓ ${s.twin_px[0]}×${s.twin_px[1]} px` : 'Camera OK · Live not calibrated') + photo;
-  b.className = 'badge ' + (s.calibrated ? 'ok' : '');
+  if (!s.photo_uploaded) { b.textContent = 'No photo yet — upload one to start'; b.className = 'badge'; return; }
+  b.textContent = s.photo_calibrated
+    ? `Photo twin ${s.photo_twin_px[0]}×${s.photo_twin_px[1]} px ✓ · ${s.calibration_mode === 'scale' ? '30 cm scale' : 'A4'} · ${s.photo_title || 'OBJECT'}`
+    : 'Photo uploaded, not calibrated';
+  b.className = 'badge ' + (s.photo_calibrated ? 'ok' : '');
 }
 refreshStatus(); setInterval(refreshStatus, 3000);
+
+// ---------- lightbox: click any window to see it big ----------
+function openLightbox(kind) {
+  const lb = document.getElementById('lightbox'), inner = document.getElementById('lbInner');
+  const title = document.getElementById('lbTitle');
+  inner.innerHTML = '';
+  if (kind === 'photo') {
+    const src = document.getElementById('photoImg').src;
+    if (!src) { showMsg('Upload a photo first.'); return; }
+    title.textContent = 'Your photo'; inner.innerHTML = `<img src="${src}">`;
+  } else if (kind === 'twin') {
+    const src = document.getElementById('photoTwinImg').src;
+    if (!src) { showMsg('Calibrate a photo first.'); return; }
+    title.textContent = 'Real twin — top-down'; inner.innerHTML = `<img src="${src}">`;
+  } else {
+    const box = document.getElementById('blueprintBox');
+    const svg = box.querySelector('svg');
+    if (!svg) { showMsg('Calibrate a photo first.'); return; }
+    title.textContent = 'Blueprint — interactive';
+    inner.innerHTML = box.innerHTML;
+    bindBlueprint(inner.querySelector('svg'));
+  }
+  lb.classList.add('open');
+}
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
 
 // ---------- photo mode ----------
 async function uploadPhoto() {
@@ -149,60 +182,82 @@ async function uploadPhoto() {
   if (j.ok) {
     document.getElementById('photoImg').src = '/uploaded.jpg?t=' + Date.now();
     document.getElementById('photoTwinImg').src = '';
-    document.getElementById('photoBlueprintImg').src = '';
+    document.getElementById('blueprintBox').innerHTML = '<p style="padding:16px;color:#9ca3af">The blueprint appears here after calibration. Click a part to see its size.</p>';
     refreshStatus();
   }
 }
 
-function drawClicks(canvas, pts, infoId) {
+function setRefMode() {
+  refMode = document.querySelector('input[name="refMode"]:checked').value;
+  document.getElementById('refFieldsA4').style.display = refMode === 'a4' ? 'block' : 'none';
+  document.getElementById('refFieldsScale').style.display = refMode === 'scale' ? 'block' : 'none';
+  photoClicks = [];
+  document.getElementById('photoClickInfo').textContent = refMode === 'a4' ? 'Clicks: 0 / 4 — A4 corners' : 'Clicks: 0 / 6 — 4 object corners, then 2 scale ends';
+}
+
+function drawClicks(canvas, pts) {
   const ctx = canvas.getContext('2d');
   pts.forEach(([x, y], i) => {
-    ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fill();
+    const isRuler = refMode === 'scale' && i >= 4;
+    ctx.fillStyle = isRuler ? 'cyan' : 'red';
+    ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fill();
     ctx.fillStyle = 'white'; ctx.font = '20px sans-serif'; ctx.fillText(String(i + 1), x + 12, y);
   });
-  document.getElementById(infoId).textContent = `Clicks: ${pts.length} / 4 — ${JSON.stringify(pts)}`;
+  const need = refMode === 'a4' ? 4 : 6;
+  document.getElementById('photoClickInfo').textContent =
+    `Clicks: ${pts.length} / ${need} — ${JSON.stringify(pts)}` +
+    (refMode === 'scale' && pts.length < 4 ? ' (object corners first)' : refMode === 'scale' && pts.length < 6 ? ' (now the 2 scale ends)' : '');
 }
 
 async function openPhotoCalib() {
   photoClicks = [];
   const s = await (await fetch('/status')).json();
   if (!s.photo_uploaded) { showMsg('Upload a photo first.'); return; }
-  document.getElementById('photoCalib').style.display = 'block';
+  document.getElementById('calib').style.display = 'block';
   const img = new Image();
   img.onload = () => {
     const c = document.getElementById('photoCanvas');
     c.width = img.width; c.height = img.height;
     c.getContext('2d').drawImage(img, 0, 0);
-    document.getElementById('photoClickInfo').textContent = 'Clicks: 0 / 4';
+    setRefMode();
   };
   img.src = '/uploaded.jpg?t=' + Date.now();
-  document.getElementById('photoCalib').scrollIntoView();
+  document.getElementById('calib').scrollIntoView();
 }
-function closePhotoCalib() { document.getElementById('photoCalib').style.display = 'none'; }
+function closePhotoCalib() { document.getElementById('calib').style.display = 'none'; }
 function clearPhotoClicks() { photoClicks = []; openPhotoCalib(); }
 
 document.getElementById('photoCanvas').addEventListener('click', (e) => {
-  if (photoClicks.length >= 4) return;
+  const need = refMode === 'a4' ? 4 : 6;
+  if (photoClicks.length >= need) return;
   const c = e.target, r = c.getBoundingClientRect();
   const x = (e.clientX - r.left) * (c.width / r.width);
   const y = (e.clientY - r.top) * (c.height / r.height);
   photoClicks.push([Math.round(x), Math.round(y)]);
-  drawClicks(c, photoClicks, 'photoClickInfo');
+  drawClicks(c, photoClicks);
 });
 
 async function applyPhotoCalib() {
-  if (photoClicks.length !== 4) { showMsg('Click exactly 4 corners first.'); return; }
-  const body = { points: photoClicks,
-    width_mm: +document.getElementById('pwMm').value,
-    height_mm: +document.getElementById('phMm').value, px_per_mm: 5,
-    title: document.getElementById('photoTitle').value };
-  const r = await fetch('/photo_calibrate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+  const title = document.getElementById('photoTitle').value;
+  let url, body;
+  if (refMode === 'a4') {
+    if (photoClicks.length !== 4) { showMsg('Click exactly 4 A4 corners first.'); return; }
+    url = '/photo_calibrate';
+    body = { points: photoClicks, width_mm: +document.getElementById('pwMm').value,
+      height_mm: +document.getElementById('phMm').value, px_per_mm: 5, title };
+  } else {
+    if (photoClicks.length !== 6) { showMsg('Click 4 object corners, then the 2 scale ends (6 clicks total).'); return; }
+    url = '/photo_calibrate_scale';
+    body = { corners: photoClicks.slice(0, 4), ruler: photoClicks.slice(4, 6),
+      ruler_mm: +document.getElementById('rulerMm').value, title };
+  }
+  const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
   const j = await r.json();
   showMsg(j.message || j.error || 'Done');
   if (j.ok) {
     const t = Date.now();
     document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
+    loadBlueprint();
     closePhotoCalib(); refreshStatus();
   }
 }
@@ -217,68 +272,115 @@ async function autoPhotoAruco() {
   if (j.ok) {
     const t = Date.now();
     document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
-    refreshStatus();
+    loadBlueprint(); refreshStatus();
   }
 }
 
-// ---------- live mode ----------
-async function openCalib() {
-  clicks = [];
-  document.getElementById('calib').style.display = 'block';
-  const img = new Image();
-  img.onload = () => {
-    const c = document.getElementById('calibCanvas');
-    c.width = img.width; c.height = img.height;
-    c.getContext('2d').drawImage(img, 0, 0);
-    document.getElementById('clickInfo').textContent = 'Clicks: 0 / 4';
-  };
-  img.src = '/snapshot.jpg?t=' + Date.now();
-  document.getElementById('calib').scrollIntoView();
-}
-function closeCalib() { document.getElementById('calib').style.display = 'none'; }
-function clearClicks() { clicks = []; openCalib(); }
-
-document.getElementById('calibCanvas').addEventListener('click', (e) => {
-  if (clicks.length >= 4) return;
-  const c = e.target, r = c.getBoundingClientRect();
-  const x = (e.clientX - r.left) * (c.width / r.width);
-  const y = (e.clientY - r.top) * (c.height / r.height);
-  clicks.push([Math.round(x), Math.round(y)]);
-  drawClicks(c, clicks, 'clickInfo');
-});
-
-async function applyCalib() {
-  if (clicks.length !== 4) { showMsg('Click exactly 4 corners first.'); return; }
-  const body = { points: clicks,
-    width_mm: +document.getElementById('wMm').value,
-    height_mm: +document.getElementById('hMm').value,
-    px_per_mm: +document.getElementById('ppm').value };
-  const r = await fetch('/calibrate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-  const j = await r.json();
-  showMsg(j.message || j.error || 'Done');
-  closeCalib(); refreshStatus();
-  const t = document.getElementById('twinImg'); t.src = '/twin_feed?t=' + Date.now();
+// ---------- interactive blueprint ----------
+async function loadBlueprint() {
+  const r = await fetch('/photo_blueprint.svg?t=' + Date.now());
+  if (!r.ok) return;
+  const svgText = await r.text();
+  const box = document.getElementById('blueprintBox');
+  box.innerHTML = svgText;
+  const info = await (await fetch('/photo_blueprint.json')).json();
+  bpPxPerMm = info.px_per_mm || 5;
+  bpScale = 1; bpTx = 0; bpTy = 0; measurePts = [];
+  document.getElementById('bpInfo').textContent =
+    `Blueprint ready: object ${info.object_w_mm} × ${info.object_h_mm} mm. Click a part to see its size, or 📏 Measure to measure any two points.`;
+  bindBlueprint(box.querySelector('svg'));
 }
 
-async function autoAruco() {
-  const body = { width_mm: +document.getElementById('wMm').value,
-    height_mm: +document.getElementById('hMm').value, px_per_mm: 2 };
-  const r = await fetch('/calibrate_aruco', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-  const j = await r.json();
-  showMsg(j.message || j.error || 'Done'); refreshStatus();
-  const t = document.getElementById('twinImg'); t.src = '/twin_feed?t=' + Date.now();
+function bpApplyTransform(svg) {
+  const vp = svg.querySelector('#bp-viewport');
+  if (vp) vp.setAttribute('transform', `translate(${bpTx} ${bpTy}) scale(${bpScale})`);
 }
-
-async function resetCalib() {
-  await fetch('/reset', { method: 'POST' });
-  showMsg('Live calibration cleared.'); refreshStatus();
-  const t = document.getElementById('twinImg'); t.src = '/twin_feed?t=' + Date.now();
+function bpZoom(f) {
+  const svg = document.querySelector('#blueprintBox svg');
+  if (!svg) return;
+  bpScale = Math.min(6, Math.max(0.4, bpScale * f));
+  bpApplyTransform(svg);
+}
+function bpResetView() {
+  bpScale = 1; bpTx = 0; bpTy = 0; measurePts = [];
+  const svg = document.querySelector('#blueprintBox svg');
+  if (svg) { bpApplyTransform(svg); const m = svg.querySelector('#measure-layer'); if (m) m.remove(); }
+}
+function toggleMeasure() {
+  measureOn = !measureOn; measurePts = [];
+  const b = document.getElementById('measureBtn');
+  b.textContent = measureOn ? '📏 Measure: on — click two points' : '📏 Measure: off';
+  b.classList.toggle('active', measureOn);
+}
+function toggleLayer(id, on) {
+  document.querySelectorAll(`#blueprintBox svg #${id}, #lbInner svg #${id}`).forEach(g => g.style.display = on ? '' : 'none');
+}
+function svgPoint(svg, evt) {
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX; pt.y = evt.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+function bindBlueprint(svg) {
+  if (!svg) return;
+  bpApplyTransform(svg);
+  // click a part -> info panel
+  svg.querySelectorAll('.part').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (measureOn) return;
+      e.stopPropagation();
+      svg.querySelectorAll('.part').forEach(p => p.classList.remove('selected'));
+      el.classList.add('selected');
+      const d = el.dataset;
+      const area = (parseFloat(d.wMm) * parseFloat(d.hMm)).toFixed(1);
+      document.getElementById('bpInfo').textContent =
+        `${d.name}: ${d.wMm} × ${d.hMm} mm · at x=${d.xMm} mm, y=${d.yMm} mm · area ≈ ${area} mm²`;
+    });
+  });
+  // measure: click two points
+  svg.addEventListener('click', (e) => {
+    if (!measureOn) return;
+    const p = svgPoint(svg, e);
+    // undo viewport transform to get sheet coords
+    const x = (p.x - bpTx) / bpScale, y = (p.y - bpTy) / bpScale;
+    measurePts.push([x, y]);
+    let layer = svg.querySelector('#measure-layer');
+    if (!layer) { layer = document.createElementNS('http://www.w3.org/2000/svg', 'g'); layer.id = 'measure-layer'; svg.querySelector('#bp-viewport').appendChild(layer); }
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('cx', x); dot.setAttribute('cy', y); dot.setAttribute('r', 6);
+    dot.setAttribute('fill', '#ffdc00'); layer.appendChild(dot);
+    if (measurePts.length === 2) {
+      const [a, b] = measurePts;
+      const dPx = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      const dMm = dPx / bpPxPerMm;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', a[0]); line.setAttribute('y1', a[1]);
+      line.setAttribute('x2', b[0]); line.setAttribute('y2', b[1]);
+      line.setAttribute('stroke', '#ffdc00'); line.setAttribute('stroke-width', '3');
+      layer.appendChild(line);
+      document.getElementById('bpInfo').textContent = `Measured: ${dMm.toFixed(1)} mm (${dPx.toFixed(0)} px ÷ ${bpPxPerMm} px/mm). Click two more points to measure again.`;
+      measurePts = [];
+    }
+  });
+  // drag to pan, wheel to zoom
+  let dragging = false, sx = 0, sy = 0;
+  svg.addEventListener('mousedown', (e) => { dragging = true; sx = e.clientX - bpTx; sy = e.clientY - bpTy; });
+  window.addEventListener('mouseup', () => dragging = false);
+  svg.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    bpTx = e.clientX - sx; bpTy = e.clientY - sy; bpApplyTransform(svg);
+  });
+  svg.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    bpZoom(e.deltaY < 0 ? 1.15 : 0.87);
+  }, { passive: false });
 }
 
 async function toggleGrid() {
   const v = document.getElementById('gridChk').checked;
   await fetch('/toggle_grid', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ show_grid: v }) });
+  const t = Date.now();
+  const img = document.getElementById('photoTwinImg');
+  if (img.src) img.src = '/photo_twin.jpg?t=' + t;
 }
 </script>
 </body>
