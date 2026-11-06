@@ -456,7 +456,7 @@ def photo_blueprint_jpg():
     sheet, _info = warp_photo_to_blueprint()
     if sheet is None:
         return jsonify({"error": "upload a photo and calibrate it first"}), 400
-    return Response(encode_jpeg(sheet, quality=85), mimetype="image/jpeg")
+    return Response(encode_jpeg(sheet, quality=95), mimetype="image/jpeg")
 
 
 @app.route("/photo_blueprint.png")

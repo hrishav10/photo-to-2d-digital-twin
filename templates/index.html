@@ -24,18 +24,19 @@
   h2.section { font-size: 13px; font-weight: 600; color: #bbb; margin: 16px 12px 8px; letter-spacing: .04em; text-transform: uppercase; }
   .controls { padding: 0 12px 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .controls label { font-size: 13px; color: #9ca3af; }
-  main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 0 12px 12px; width: 100%; }
-  @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 12px 12px; width: 100%; }
   @media (max-width: 700px) { main { grid-template-columns: 1fr; } }
+  .toggle { display: flex; gap: 0; border: 1px solid #444; border-radius: 6px; overflow: hidden; }
+  .toggle button { border: none; border-radius: 0; padding: 4px 10px; font-size: 12px; background: #1c1c1c; }
+  .toggle button.active { background: #2563eb; color: #fff; }
   .window { background: #000; border: 1px solid #2a2a2a; border-radius: 8px; overflow: hidden; animation: rise .35s ease both; transition: border-color .2s ease; }
   .window:nth-child(2) { animation-delay: .06s; }
-  .window:nth-child(3) { animation-delay: .12s; }
   .window:hover { border-color: #3d3d3d; }
   .window h2 { font-size: 13px; margin: 0; padding: 10px 12px; background: #181818; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
   .window h2 span { color: #9ca3af; font-weight: 400; }
   .expand { background: none; border: 1px solid #444; padding: 2px 9px; font-size: 12px; }
   .window img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: contain; background: #000; cursor: zoom-in; animation: fade .3s ease both; }
-  #photoTwinImg, #photoBlueprintImg { aspect-ratio: auto; }
+  #photoTwinImg, #photoDrawingImg { aspect-ratio: auto; }
   #calib { display: none; margin: 0 12px 12px; background: #181818; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; animation: rise .3s ease both; }
   #calib h3 { margin: 0 0 10px; font-size: 14px; }
   #calib p { margin: 8px 0; font-size: 13px; color: #bbb; }
@@ -58,12 +59,12 @@
 </head>
 <body>
 <header>
-  <h1>Photo to 2D Digital Twin <span>— Blueprint</span></h1>
+  <h1>Photo to 2D Digital Twin</h1>
   <span id="statusBadge" class="badge">Checking</span>
   <label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> 100 mm grid</label>
 </header>
 
-<p class="hint">One photo + a known reference = a top-down twin and a dimensioned blueprint. Small object: A4 (210 × 297 mm). Larger object: a 30 cm scale beside it.</p>
+<p class="hint">One photo + a known reference = a top-down twin and a dimensioned technical drawing. Small object: A4 (210 × 297 mm). Larger object: a 30 cm scale beside it.</p>
 
 <h2 class="section">Photo</h2>
 <div class="controls">
@@ -72,8 +73,7 @@
   <button onclick="openPhotoCalib()">Calibrate</button>
   <label>Object name <input id="photoTitle" type="text" value="" placeholder="e.g. Submarine" style="width:150px"></label>
   <a href="/photo_twin.png"><button>Download twin PNG</button></a>
-  <a href="/photo_blueprint.svg" download="blueprint.svg"><button>Download blueprint SVG</button></a>
-  <a href="/photo_blueprint.png"><button>Download blueprint PNG</button></a>
+  <a href="/photo_blueprint.jpg"><button>Download technical drawing JPG</button></a>
 </div>
 
 <main>
@@ -82,12 +82,9 @@
     <img id="photoImg" src="" alt="Upload a photo to see it here" onclick="openLightbox('photo')">
   </section>
   <section class="window">
-    <h2>02 — Twin <span>Top-down, 5 px/mm</span> <button class="expand" onclick="openLightbox('twin')">Expand</button></h2>
+    <h2>02 — Twin <span>Top-down, 5 px/mm</span> <span class="toggle"><button id="toggleReal" class="active" onclick="setTwinView('real')">Real</button><button id="toggleDrawing" onclick="setTwinView('drawing')">Technical Drawing</button></span> <button class="expand" onclick="openLightbox('twin')">Expand</button></h2>
     <img id="photoTwinImg" src="" alt="The twin appears here after calibration" onclick="openLightbox('twin')">
-  </section>
-  <section class="window">
-    <h2>03 — Blueprint <span>Dimensioned, mm</span> <button class="expand" onclick="openLightbox('blueprint')">Expand</button></h2>
-    <img id="photoBlueprintImg" src="" alt="The blueprint appears here after calibration" onclick="openLightbox('blueprint')">
+    <img id="photoDrawingImg" src="" alt="The technical drawing appears here after calibration" onclick="openLightbox('twin')" style="display:none">
   </section>
 </main>
 
@@ -112,7 +109,7 @@
   <div class="point-list" id="pointList"></div>
   <p style="color:#9ca3af">Drag a point to move it. Backspace removes the last point. Preview checks the selection before you apply it.</p>
   <p>
-    <button class="primary" onclick="applyPhotoCalib()">Apply — make twin and blueprint</button>
+    <button class="primary" onclick="applyPhotoCalib()">Apply — make twin and technical drawing</button>
     <button onclick="previewPhotoCalib()">Preview</button>
     <button onclick="undoPhotoClick()">Undo last point</button>
     <button onclick="clearPhotoClicks()">Clear</button>
@@ -131,6 +128,14 @@
 </div>
 
 <script>
+let twinView = 'real';
+function setTwinView(v) {
+  twinView = v;
+  document.getElementById('toggleReal').className = v === 'real' ? 'active' : '';
+  document.getElementById('toggleDrawing').className = v === 'drawing' ? 'active' : '';
+  document.getElementById('photoTwinImg').style.display = v === 'real' ? '' : 'none';
+  document.getElementById('photoDrawingImg').style.display = v === 'drawing' ? '' : 'none';
+}
 let photoClicks = [];
 let refMode = 'a4';
 let calibImg = null;      // base image drawn on the canvas
@@ -158,8 +163,7 @@ function openLightbox(kind) {
   const get = (id) => document.getElementById(id);
   let src = '', label = '';
   if (kind === 'photo') { src = get('photoImg')?.src; label = 'Photo'; }
-  else if (kind === 'twin') { src = get('photoTwinImg')?.src; label = 'Twin'; }
-  else { src = get('photoBlueprintImg')?.src; label = 'Blueprint'; }
+  else { src = twinView === 'drawing' ? get('photoDrawingImg')?.src : get('photoTwinImg')?.src; label = twinView === 'drawing' ? 'Twin — Technical Drawing' : 'Twin'; }
   if (!src) { showMsg('Calibrate a photo first.'); return; }
   title.textContent = label;
   inner.innerHTML = `<img src="${src}" alt="${label}">`;
@@ -182,7 +186,7 @@ async function uploadPhoto() {
   if (j.ok) {
     document.getElementById('photoImg').src = '/uploaded.jpg?t=' + Date.now();
     document.getElementById('photoTwinImg').src = '';
-    document.getElementById('photoBlueprintImg').src = '';
+    document.getElementById('photoDrawingImg').src = '';
     refreshStatus();
   }
 }
@@ -306,7 +310,7 @@ async function applyPhotoCalib() {
   if (j.ok) {
     const t = Date.now();
     document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.svg?t=' + t;
+    document.getElementById('photoDrawingImg').src = '/photo_blueprint.jpg?t=' + t;
     closePhotoCalib(); refreshStatus();
   }
 }
@@ -321,7 +325,7 @@ async function autoPhotoAruco() {
   if (j.ok) {
     const t = Date.now();
     document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.svg?t=' + Date.now();
+    document.getElementById('photoDrawingImg').src = '/photo_blueprint.jpg?t=' + Date.now();
     refreshStatus();
   }
 }

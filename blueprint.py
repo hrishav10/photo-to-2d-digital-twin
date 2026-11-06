@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Twin -> Blueprint: turn a top-down twin photo into a game-style
-blueprint drawing, like a submarine blueprint in a game.
+"""Twin -> Technical Drawing: turn a top-down twin photo into a
+technical drawing, like a submarine blueprint in a game.
 
   Input : warped top-down twin (BGR), its real size in mm, px/mm
   Output: blueprint sheet (BGR) — same twin, but drawn as:
@@ -250,7 +250,7 @@ def make_blueprint_svg(twin, width_mm, height_mm, px_per_mm,
 <line x1="8" y1="{sh - bottom + 4}" x2="{sw - 8}" y2="{sh - bottom + 4}" stroke="#fff" stroke-width="2"/>
 <text x="24" y="{sh - bottom + 34}" fill="#fff" font-family="sans-serif" font-size="26" font-weight="bold">{esc_title} — TOP VIEW</text>
 <text x="24" y="{sh - bottom + 64}" fill="#00dcff" font-family="sans-serif" font-size="18">REF {width_mm:.0f} x {height_mm:.0f} mm  |  SCALE {px_per_mm:g} px/mm  |  GRID 10 mm  |  {today}</text>
-<text x="{sw - 190}" y="{sh - bottom + 34}" fill="#00dcff" font-family="sans-serif" font-size="26" font-weight="bold">BLUEPRINT</text>
+<text x="{sw - 330}" y="{sh - bottom + 34}" fill="#00dcff" font-family="sans-serif" font-size="20" font-weight="bold">TECHNICAL DRAWING</text>
 </g>
 </svg>'''
     info = {
@@ -291,13 +291,19 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
     for y in range(0, sheet.shape[0], step5):
         cv2.line(sheet, (0, y), (sheet.shape[1], y), BLUE_GRID, 1)
 
+    # --- line drawing of the twin: edges in white ---
+    # The original JPEG look: the twin's own edges, so the
+    # drawing follows the object's real shape (screen, keys,
+    # rounded corners) instead of just a rectangle. Canny
+    # 25/75 with no dilation keeps the lines thin and clean.
+    gray = cv2.cvtColor(twin, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(gray, 25, 75)
+    sheet[oy:oy + th, ox:ox + tw][edges > 0] = WHITE
+
     # --- object outline + inner parts ---
-    # Outline = the measured bounding rectangle. The traced
-    # contour polygon is NOT used here: on a real photo,
-    # approxPolyDP turns rounded corners, glare and shadow
-    # into big diagonal cuts, so the outline came out skewed
-    # and did not look like the object. The rect is the
-    # measured size and is always straight.
+    # Outline = the measured bounding rectangle (straight and
+    # exact; the traced contour polygon skewed on real photos).
     obj = _find_object_rect(twin)
     if obj is None:
         obj = (0, 0, tw, th)  # fallback: the whole twin is the object
@@ -339,8 +345,8 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
                 f"GRID 10 mm  |  {today}",
                 (24, ty + 52), cv2.FONT_HERSHEY_SIMPLEX, 0.6, CYAN, 1,
                 cv2.LINE_AA)
-    cv2.putText(sheet, "BLUEPRINT", (sheet.shape[1] - 190, ty + 22),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.9, CYAN, 2, cv2.LINE_AA)
+    cv2.putText(sheet, "TECHNICAL DRAWING", (sheet.shape[1] - 340, ty + 22),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, CYAN, 2, cv2.LINE_AA)
 
     info = {
         "object_w_mm": round(obj_w_mm, 1),
