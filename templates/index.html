@@ -57,6 +57,12 @@
   .card footer .spacer { flex: 1; }
   .card footer label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   input[type="checkbox"] { accent-color: #7c3aed; }
+  .mini-btn { font: inherit; font-size: 12px; font-weight: 550; border-radius: 999px; padding: 5px 12px; cursor: pointer; border: 1px solid #2c2c3d; background: #17171f; color: #c6c6d2; transition: background .15s ease, color .15s ease; }
+  .mini-btn:hover { background: #1e1e2c; color: #fff; }
+  .mini-btn.on { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; }
+  #measureSvg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+  .card .frame.measure { cursor: crosshair; }
+  #measureMeta { color: #67e8f9; }
 
   /* card menu */
   .menu-wrap { position: relative; }
@@ -148,11 +154,12 @@
       <span class="menu-wrap"><button class="icon-btn" onclick="toggleMenu('menuTwin', event)" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
       <span class="menu" id="menuTwin"><a href="/photo_twin.png" download="twin.png">Download twin PNG</a><a href="#" onclick="openLightbox('twin'); return false;">Expand</a></span></span>
     </header>
-    <div class="body"><div class="frame" onclick="openLightbox('twin')">
+    <div class="body"><div class="frame" id="twinFrame" onclick="twinFrameClick(event)">
       <img id="photoTwinImg" src="" alt="" style="display:none">
+      <svg id="measureSvg"></svg>
       <span class="empty" id="twinEmpty">Calibrate to generate the twin</span>
     </div></div>
-    <footer><span id="twinMeta"></span><span class="spacer"></span><label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> Grid</label></footer>
+    <footer><span id="twinMeta"></span><span id="measureMeta"></span><span class="spacer"></span><button class="mini-btn" id="measureBtn" onclick="toggleMeasure()">Measure</button><button class="mini-btn" id="measureClearBtn" onclick="clearMeasurements()" style="display:none">Clear</button><label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> Grid</label></footer>
   </section>
   <section class="card">
     <header><h2>Blueprint</h2><span class="spacer"></span>
@@ -290,7 +297,7 @@ function openLightbox(kind) {
 }
 function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'Escape') { closeLightbox(); if (measureMode) toggleMeasure(); }
   if (e.key === 'Backspace' && document.getElementById('calib').style.display === 'block') { e.preventDefault(); undoPhotoClick(); }
 });
 
@@ -318,6 +325,7 @@ async function uploadPhoto() {
     document.getElementById('twinMeta').textContent = '';
     document.getElementById('blueprintMeta').textContent = '';
     document.getElementById('fileName').textContent = j.filename;
+    clearMeasurements();
     refreshStatus();
     // next step pops up on its own: detect the corners, then
     // Calibrate opens with the points already placed
@@ -438,7 +446,109 @@ async function previewPhotoCalib() {
   showMsg('Preview ready. If it looks right, Generate.');
 }
 
+// ---------- measure on the twin ----------
+// Click two points on the twin -> distance in real mm, drawn
+// as a line with a label. The twin is top-down at a known
+// px/mm, so distance_px / px_per_mm = mm. Several measurements
+// can stack; Clear removes them all.
+let measureMode = false;
+let measurements = [];   // {x1,y1,x2,y2,mm} in twin px
+let pendingPoint = null; // [x,y] twin px, first click of a pair
+let measureHover = null; // [x,y] twin px, rubber-band preview
+let twinPxPerMm = null;  // set in showResults
+let twinSizePx = null;   // [w,h] set in showResults
+
+function twinFrameClick(e) {
+  if (measureMode) { measureClick(e); return; }
+  openLightbox('twin');
+}
+function toggleMeasure() {
+  const img = document.getElementById('photoTwinImg');
+  if (!img.src || !twinPxPerMm) { showMsg('Calibrate a photo first, then measure.'); return; }
+  measureMode = !measureMode;
+  pendingPoint = null; measureHover = null;
+  document.getElementById('measureBtn').classList.toggle('on', measureMode);
+  document.getElementById('twinFrame').classList.toggle('measure', measureMode);
+  showMsg(measureMode ? 'Measure: click two points on the twin.' : 'Measure off.');
+  renderMeasurements();
+}
+function clearMeasurements() {
+  measurements = []; pendingPoint = null; measureHover = null;
+  document.getElementById('measureClearBtn').style.display = 'none';
+  document.getElementById('measureMeta').textContent = '';
+  renderMeasurements();
+}
+function twinPointFromEvent(e) {
+  // click -> twin px, accounting for object-fit:contain
+  // letterboxing (the displayed image may not fill the frame)
+  const img = document.getElementById('photoTwinImg');
+  const r = img.getBoundingClientRect();
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  if (!nw || !nh) return null;
+  const scale = Math.min(r.width / nw, r.height / nh);
+  const dw = nw * scale, dh = nh * scale;
+  const offX = (r.width - dw) / 2, offY = (r.height - dh) / 2;
+  const x = (e.clientX - r.left - offX) / scale;
+  const y = (e.clientY - r.top - offY) / scale;
+  if (x < 0 || y < 0 || x > nw || y > nh) return null;
+  return [x, y];
+}
+function measureClick(e) {
+  const p = twinPointFromEvent(e);
+  if (!p) return;
+  if (!pendingPoint) { pendingPoint = p; renderMeasurements(); return; }
+  const mm = Math.hypot(p[0] - pendingPoint[0], p[1] - pendingPoint[1]) / twinPxPerMm;
+  measurements.push({ x1: pendingPoint[0], y1: pendingPoint[1], x2: p[0], y2: p[1], mm });
+  pendingPoint = null; measureHover = null;
+  document.getElementById('measureClearBtn').style.display = '';
+  document.getElementById('measureMeta').textContent = `${measurements.length} measurement${measurements.length > 1 ? 's' : ''} · last ${mm.toFixed(1)} mm`;
+  renderMeasurements();
+}
+function renderMeasurements() {
+  const svg = document.getElementById('measureSvg');
+  const img = document.getElementById('photoTwinImg');
+  const frame = document.getElementById('twinFrame');
+  if (!img.src) { svg.innerHTML = ''; return; }
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  if (!nw || !nh) { svg.innerHTML = ''; return; }
+  const fr = frame.getBoundingClientRect();
+  const r = img.getBoundingClientRect();
+  const scale = Math.min(r.width / nw, r.height / nh);
+  const dw = nw * scale, dh = nh * scale;
+  const offX = r.left - fr.left + (r.width - dw) / 2;
+  const offY = r.top - fr.top + (r.height - dh) / 2;
+  const X = (x) => (offX + x * scale).toFixed(1);
+  const Y = (y) => (offY + y * scale).toFixed(1);
+  const line = (m, dashed) => {
+    const mx = (m.x1 + m.x2) / 2, my = (m.y1 + m.y2) / 2;
+    return `<line x1="${X(m.x1)}" y1="${Y(m.y1)}" x2="${X(m.x2)}" y2="${Y(m.y2)}" stroke="#22d3ee" stroke-width="2" ${dashed ? 'stroke-dasharray="6 4"' : ''}/>`
+      + `<circle cx="${X(m.x1)}" cy="${Y(m.y1)}" r="4" fill="#22d3ee"/><circle cx="${X(m.x2)}" cy="${Y(m.y2)}" r="4" fill="#22d3ee"/>`
+      + `<text x="${X(mx)}" y="${(offY + my * scale - 8).toFixed(1)}" fill="#22d3ee" font-size="13" font-weight="600" text-anchor="middle" style="paint-order:stroke" stroke="#0a0a12" stroke-width="4">${m.mm.toFixed(1)} mm</text>`;
+  };
+  let s = '';
+  measurements.forEach(m => { s += line(m, false); });
+  if (pendingPoint) {
+    s += `<circle cx="${X(pendingPoint[0])}" cy="${Y(pendingPoint[1])}" r="4" fill="#22d3ee"/>`;
+    if (measureHover) {
+      const dx = measureHover[0] - pendingPoint[0], dy = measureHover[1] - pendingPoint[1];
+      s += line({ x1: pendingPoint[0], y1: pendingPoint[1], x2: measureHover[0], y2: measureHover[1], mm: Math.hypot(dx, dy) / twinPxPerMm }, true);
+    }
+  }
+  svg.innerHTML = s;
+}
+document.getElementById('twinFrame').addEventListener('mousemove', (e) => {
+  if (!measureMode || !pendingPoint) return;
+  const p = twinPointFromEvent(e);
+  if (!p) return;
+  measureHover = p;
+  renderMeasurements();
+});
+window.addEventListener('resize', () => { if (measureMode || measurements.length) renderMeasurements(); });
+
 function showResults(j) {
+  twinPxPerMm = j.blueprint.px_per_mm;
+  twinSizePx = j.twin_px;
+  clearMeasurements();
   const t = Date.now();
   const twin = document.getElementById('photoTwinImg');
   const bp = document.getElementById('photoBlueprintImg');

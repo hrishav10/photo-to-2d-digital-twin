@@ -88,6 +88,21 @@ out with scattered fragments instead of the key grid.
 The whole body itself is also skipped as a part, so it no
 longer gets drawn twice on top of the outline.
 
+## Measure anything on the twin
+
+The Twin card has a Measure toggle in its footer.
+Turn it on and click any two points on the twin — key
+spacing, the screen, a mounting-hole distance — and the
+distance in real mm is drawn on the twin as a line with
+a label. The first click shows a live rubber-band line
+with the distance as you move. Several measurements can
+stack; Clear removes them all, and Esc turns Measure
+off. Clicks are mapped through the displayed image back
+to twin pixels (accounting for letterboxing), then
+divided by the calibration's px/mm — the same scale the
+blueprint uses, so the numbers agree. Starting a new
+photo or twin clears the old measurements.
+
 ## Every object gets measured, not just the biggest
 
 The blueprint finds *all* objects on the sheet
