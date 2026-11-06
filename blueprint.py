@@ -16,11 +16,10 @@ and height are measured from its largest contour in the twin.
 
 Usage:
     from blueprint import make_blueprint
-    sheet, info = make_blueprint(twin, 210, 297, 5.0, title="SUBMARINE")
+    sheet, info = make_blueprint(twin, 210, 297, 5.0, title="CALCULATOR")
     # info = {"object_w_mm": ..., "object_h_mm": ..., "object_px": (x,y,w,h)}
 """
 import datetime
-import html
 
 import cv2
 import numpy as np
@@ -58,49 +57,29 @@ def _find_object_rect(twin):
     return cv2.boundingRect(cnt)
 
 
-def _inner_rects(twin, obj=None):
-    """Smaller rectangular parts inside the object (calculator
-    buttons, screen, etc.) -> list of (x, y, w, h) in twin px.
-    Used for the inner line drawing. Best-effort: missed parts
-    just don't get drawn.
-
-    Two things that used to break this on a real photo:
-    - Canny ran at 50/150 on the whole twin. Calculator keys
-      are only slightly lighter than the black body (gradient
-      ~40), so no key edge was ever found and the drawing came
-      out with scattered fragments instead of the key grid.
-      It now runs at 25/75, on the object crop only.
-    - The whole body itself used to pass the size filter and
-      get drawn as a "part" on top of the outline. A rect that
-      is ~the whole object is now skipped.
-    """
-    if obj is None:
-        obj = _find_object_rect(twin)
-    if obj is None:
-        return []
-    ox, oy, ow, oh = obj
-    crop = twin[oy:oy + oh, ox:ox + ow]
-    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+def _inner_rects(twin):
+    """Smaller rectangular parts inside the twin (calculator buttons,
+    screen, etc.) -> list of (x, y, w, h) in px. Used for the inner
+    line drawing. Best-effort: missed parts just don't get drawn."""
+    gray = cv2.cvtColor(twin, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(gray, 25, 75)
+    edges = cv2.Canny(gray, 50, 150)
     contours, _ = cv2.findContours(edges, cv2.RETR_TREE,
                                    cv2.CHAIN_APPROX_SIMPLE)
+    h, w = gray.shape
     out = []
     for c in contours:
         area = cv2.contourArea(c)
-        if area < 200 or area > 0.25 * ow * oh:
+        if area < 200 or area > 0.25 * h * w:
             continue
         x, y, rw, rh = cv2.boundingRect(c)
         if rw < 8 or rh < 8:
-            continue
-        # the whole body is not a part
-        if rw > 0.9 * ow and rh > 0.9 * oh:
             continue
         # keep roughly rectangular parts
         approx = cv2.approxPolyDP(c, 0.02 * cv2.arcLength(c, True), True)
         if len(approx) < 4:
             continue
-        out.append((x + ox, y + oy, rw, rh))
+        out.append((x, y, rw, rh))
     # de-duplicate near-identical rects (keep the largest of a cluster)
     out.sort(key=lambda r: r[2] * r[3], reverse=True)
     kept = []
@@ -124,8 +103,7 @@ def _dashed_line(img, p1, p2, color, thickness=1, dash=14, gap=10):
     while d < length:
         e = min(d + dash, length)
         cv2.line(img, (int(x1 + dx * d), int(y1 + dy * d)),
-                 (int(x1 + dx * e), int(y1 + dy * e)), color, thickness,
-                 cv2.LINE_AA)
+                 (int(x1 + dx * e), int(y1 + dy * e)), color, thickness)
         d = e + gap
 
 
@@ -167,106 +145,8 @@ def _dim_v(img, y0, y1, x, label, color=CYAN):
     img[max(0, y):y + th2, x - tw2 // 2:x - tw2 // 2 + tw2] = txt
 
 
-def make_blueprint_svg(twin, width_mm, height_mm, px_per_mm,
-                       title="OBJECT"):
-    """Same blueprint as make_blueprint(), but as interactive SVG.
-
-    Every part is a <rect class="part"> with data-*
-    attributes in real mm, so the browser can click / hover it,
-    show its size, and measure between points. Groups are
-    #bp-grid, #bp-drawing, #bp-dims, #bp-centre, #bp-title so the
-    UI can toggle layers. Returns (svg_string, info_dict).
-    """
-    if not title:
-        title = "OBJECT"
-    th, tw = twin.shape[:2]
-    mx, my, bottom = 90, 90, 90
-    sw, sh = tw + mx + 70, th + my + bottom
-    ox, oy = mx, my
-    obj = _find_object_rect(twin)
-    if obj is None:
-        obj = (0, 0, tw, th)
-    x, y, w, h = obj
-    obj_w_mm = w / px_per_mm
-    obj_h_mm = h / px_per_mm
-    cx, cy = ox + x + w // 2, oy + y + h // 2
-    today = datetime.date.today().isoformat()
-    esc_title = html.escape(str(title).upper())
-
-    def mm(v):
-        return v / px_per_mm
-
-    parts = []
-    # Outline = the measured bounding rectangle, NOT the traced
-    # photo contour. The contour trace (approxPolyDP) turns a
-    # real photo's rounded corners, glare and shadow into big
-    # diagonal cuts, so the outline came out skewed and did not
-    # look like the object. The rect is the measured size
-    # (81 x 168 mm for this calculator) and is always straight.
-    parts.append(
-        f'<rect class="part main" data-name="{esc_title}" '
-        f'data-w-mm="{obj_w_mm:.1f}" data-h-mm="{obj_h_mm:.1f}" '
-        f'data-x-mm="{mm(x):.1f}" data-y-mm="{mm(y):.1f}" '
-        f'x="{ox + x}" y="{oy + y}" width="{w}" height="{h}" '
-        f'fill="none" stroke="#fff" stroke-width="3"/>')
-    for i, (ix, iy, iw, ih) in enumerate(_inner_rects(twin, obj)):
-        parts.append(
-            f'<rect class="part inner" data-name="Part {i + 1}" '
-            f'data-w-mm="{mm(iw):.1f}" data-h-mm="{mm(ih):.1f}" '
-            f'data-x-mm="{mm(ix):.1f}" data-y-mm="{mm(iy):.1f}" '
-            f'x="{ox + ix}" y="{oy + iy}" width="{iw}" height="{ih}" '
-            f'fill="rgba(255,255,255,0.08)" stroke="#fff" stroke-width="2"/>')
-
-    grid = []
-    step = max(1, int(round(10 * px_per_mm)))
-    for gx in range(0, sw, step):
-        grid.append(f'<line x1="{gx}" y1="0" x2="{gx}" y2="{sh}" stroke="#123a6e" stroke-width="1"/>')
-    for gy in range(0, sh, step):
-        grid.append(f'<line x1="0" y1="{gy}" x2="{sw}" y2="{gy}" stroke="#123a6e" stroke-width="1"/>')
-
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {sw} {sh}" width="100%" data-px-per-mm="{px_per_mm:g}" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
-<defs><marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#00dcff"/></marker></defs>
-<rect width="{sw}" height="{sh}" fill="#0a2e6e"/>
-<g id="bp-grid">{''.join(grid)}</g>
-<g id="bp-viewport">
-<g id="bp-drawing">{''.join(parts)}</g>
-<g id="bp-centre" stroke="#c8c8c8" stroke-width="1" stroke-dasharray="14 10">
-<line x1="{ox + x - 30}" y1="{cy}" x2="{ox + x + w + 30}" y2="{cy}"/>
-<line x1="{cx}" y1="{oy + y - 30}" x2="{cx}" y2="{oy + y + h + 30}"/>
-</g>
-<g id="bp-dims" stroke="#00dcff" fill="#00dcff" font-family="sans-serif" font-size="22">
-<line x1="{ox + x}" y1="{my - 40}" x2="{ox + x + w}" y2="{my - 40}" stroke-width="2" marker-start="url(#arr)" marker-end="url(#arr)"/>
-<line x1="{ox + x}" y1="{oy + y}" x2="{ox + x}" y2="{my - 55}" stroke-width="1"/>
-<line x1="{ox + x + w}" y1="{oy + y}" x2="{ox + x + w}" y2="{my - 55}" stroke-width="1"/>
-<text x="{(2 * ox + 2 * x + w) // 2}" y="{my - 48}" text-anchor="middle" stroke="none">{obj_w_mm:.0f} mm</text>
-<line x1="{mx - 40}" y1="{oy + y}" x2="{mx - 40}" y2="{oy + y + h}" stroke-width="2" marker-start="url(#arr)" marker-end="url(#arr)"/>
-<line x1="{ox + x}" y1="{oy + y}" x2="{mx - 55}" y2="{oy + y}" stroke-width="1"/>
-<line x1="{ox + x}" y1="{oy + y + h}" x2="{mx - 55}" y2="{oy + y + h}" stroke-width="1"/>
-<text x="{mx - 48}" y="{(2 * oy + 2 * y + h) // 2}" text-anchor="middle" stroke="none" transform="rotate(-90 {mx - 48} {(2 * oy + 2 * y + h) // 2})">{obj_h_mm:.0f} mm</text>
-</g>
-</g>
-<g id="bp-title">
-<rect x="8" y="8" width="{sw - 16}" height="{sh - 16}" fill="none" stroke="#fff" stroke-width="2"/>
-<line x1="8" y1="{sh - bottom + 4}" x2="{sw - 8}" y2="{sh - bottom + 4}" stroke="#fff" stroke-width="2"/>
-<text x="24" y="{sh - bottom + 34}" fill="#fff" font-family="sans-serif" font-size="26" font-weight="bold">{esc_title} — TOP VIEW</text>
-<text x="24" y="{sh - bottom + 64}" fill="#00dcff" font-family="sans-serif" font-size="18">REF {width_mm:.0f} x {height_mm:.0f} mm  |  SCALE {px_per_mm:g} px/mm  |  GRID 10 mm  |  {today}</text>
-<text x="{sw - 330}" y="{sh - bottom + 34}" fill="#00dcff" font-family="sans-serif" font-size="20" font-weight="bold">TECHNICAL DRAWING</text>
-</g>
-</svg>'''
-    info = {
-        "object_w_mm": round(obj_w_mm, 1),
-        "object_h_mm": round(obj_h_mm, 1),
-        "object_px": [int(v) for v in obj],
-        "sheet_px": [int(sw), int(sh)],
-        "ref_w_mm": width_mm,
-        "ref_h_mm": height_mm,
-        "px_per_mm": px_per_mm,
-    }
-    return svg, info
-
-
 def make_blueprint(twin, width_mm, height_mm, px_per_mm,
-                   title="OBJECT"):
+                   title="CALCULATOR"):
     """twin (BGR) -> (blueprint sheet (BGR), info dict).
 
     The sheet is the twin plus margins: 90 px left/top for the
@@ -292,27 +172,23 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
         cv2.line(sheet, (0, y), (sheet.shape[1], y), BLUE_GRID, 1)
 
     # --- line drawing of the twin: edges in white ---
-    # The original JPEG look: the twin's own edges, so the
-    # drawing follows the object's real shape (screen, keys,
-    # rounded corners) instead of just a rectangle. Canny
-    # 25/75 with no dilation keeps the lines thin and clean.
     gray = cv2.cvtColor(twin, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(gray, 25, 75)
+    edges = cv2.Canny(gray, 50, 150)
+    # keep only strong, object-like edges: dilate slightly so lines read
+    edges = cv2.dilate(edges, np.ones((2, 2), np.uint8), iterations=1)
     sheet[oy:oy + th, ox:ox + tw][edges > 0] = WHITE
 
     # --- object outline + inner parts ---
-    # Outline = the measured bounding rectangle (straight and
-    # exact; the traced contour polygon skewed on real photos).
     obj = _find_object_rect(twin)
     if obj is None:
         obj = (0, 0, tw, th)  # fallback: the whole twin is the object
     x, y, w, h = obj
     cv2.rectangle(sheet, (ox + x, oy + y), (ox + x + w, oy + y + h),
                   WHITE, 3, cv2.LINE_AA)
-    for (ix, iy, iw, ih) in _inner_rects(twin, obj):
+    for (ix, iy, iw, ih) in _inner_rects(twin):
         cv2.rectangle(sheet, (ox + ix, oy + iy), (ox + ix + iw, oy + iy + ih),
-                      WHITE, 2, cv2.LINE_AA)
+                      LIGHT_BLUE, 1)
 
     obj_w_mm = w / px_per_mm
     obj_h_mm = h / px_per_mm
@@ -324,19 +200,18 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
 
     # --- dimension lines (real mm, from the object rect) ---
     # extension lines from the object to the dimension lines
-    cv2.line(sheet, (ox + x, oy + y), (ox + x, my - 55), CYAN, 1, cv2.LINE_AA)
-    cv2.line(sheet, (ox + x + w, oy + y), (ox + x + w, my - 55), CYAN, 1, cv2.LINE_AA)
-    cv2.line(sheet, (ox + x, oy + y), (mx - 55, oy + y), CYAN, 1, cv2.LINE_AA)
-    cv2.line(sheet, (ox + x, oy + y + h), (mx - 55, oy + y + h), CYAN, 1, cv2.LINE_AA)
+    cv2.line(sheet, (ox + x, oy + y), (ox + x, my - 55), CYAN, 1)
+    cv2.line(sheet, (ox + x + w, oy + y), (ox + x + w, my - 55), CYAN, 1)
+    cv2.line(sheet, (ox + x, oy + y), (mx - 55, oy + y), CYAN, 1)
+    cv2.line(sheet, (ox + x, oy + y + h), (mx - 55, oy + y + h), CYAN, 1)
     _dim_h(sheet, ox + x, ox + x + w, my - 40, f"{obj_w_mm:.0f} mm")
     _dim_v(sheet, oy + y, oy + y + h, mx - 40, f"{obj_h_mm:.0f} mm")
 
     # --- border + title block (game-blueprint style) ---
     cv2.rectangle(sheet, (8, 8), (sheet.shape[1] - 9, sheet.shape[0] - 9),
-                  WHITE, 2, cv2.LINE_AA)
+                  WHITE, 2)
     ty = sheet.shape[0] - bottom + 12
-    cv2.line(sheet, (8, ty - 8), (sheet.shape[1] - 9, ty - 8), WHITE, 2,
-             cv2.LINE_AA)
+    cv2.line(sheet, (8, ty - 8), (sheet.shape[1] - 9, ty - 8), WHITE, 2)
     cv2.putText(sheet, f"{title}  —  TOP VIEW", (24, ty + 22),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.9, WHITE, 2, cv2.LINE_AA)
     today = datetime.date.today().isoformat()

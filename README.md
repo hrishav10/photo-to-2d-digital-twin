@@ -89,22 +89,6 @@ skewed and did not look like the object. The rectangle
 cannot skew that way. Inner parts (screen, keys) are still
 detected from the photo and drawn inside it, in white.
 
-## Sharp technical drawing lines — SVG, not JPG
-
-The technical drawing shown in the app is an **SVG (vector)**,
-not a JPG. That is the whole fix for noisy lines:
-
-- SVG lines are drawn from coordinates, not pixels, so
-  they stay sharp at any zoom — no JPEG compression
-  artefacts, no jagged 1 px lines.
-- The raster PNG version no longer draws the Canny edge
-  layer (every photo edge used to become a white pixel,
-  which read as noise). It draws only clean geometry —
-  the object's traced outline, inner parts, centre and
-  dimension lines — all anti-aliased (`LINE_AA`) and
-  2–3 px thick.
-- Download the SVG for the sharpest result; the PNG is
-  lossless and uses the same clean drawing.
 
 ## Curved objects — e.g. a guitar on the floor
 
@@ -150,7 +134,7 @@ python3 photo_to_2d.py calculator.jpg --corners 120,80 900,110 880,700 140,660 -
 Photo ──► Calibrate once ──► Warp ──► Real twin + Technical Drawing
          A4 corners, or       cv2.warpPerspective
          object corners +     technical drawing.py redraws
-         30 cm scale ends     it as an SVG/PNG
+         30 cm scale ends     it as a JPEG drawing
 ```
 
 - **Calibrate once, warp forever.** The homography is a single 3×3
@@ -164,8 +148,8 @@ Photo ──► Calibrate once ──► Warp ──► Real twin + Technical Dr
 
 | File | What it does |
 | --- | --- |
-| `app.py` | Flask app: photo upload, A4 + 30 cm scale calibration, technical drawing SVG/PNG/JSON routes (live mode paused, `--live` to re-enable) |
-| `technical drawing.py` | Twin → technical drawing sheet: blue paper, white outlines, dimension lines in mm, centre lines, title block (PNG, plus an SVG export) |
+| `app.py` | Flask app: photo upload, A4 + 30 cm scale calibration, technical drawing JPG/PNG/JSON routes (live mode paused, `--live` to re-enable) |
+| `technical drawing.py` | Twin → technical drawing sheet (first-build recipe): blue paper, white edge drawing, measured outline, dimension lines in mm, centre lines, title block |
 | `templates/index.html` | Three-window UI: photo, real twin, technical drawing — click-to-expand lightbox |
 | `photo_to_2d.py` | CLI version: one photo → top-down PNG (+ optional SVG plan in mm, `--technical drawing` sheet) |
 | `requirements.txt` | Flask, opencv-python, numpy |

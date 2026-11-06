@@ -63,7 +63,7 @@ import cv2
 import numpy as np
 from flask import Flask, Response, jsonify, render_template, request, send_file
 
-from blueprint import make_blueprint, make_blueprint_svg
+from blueprint import make_blueprint
 
 app = Flask(__name__)
 
@@ -206,20 +206,6 @@ def warp_photo_to_blueprint():
         twin, photo_state["width_mm"], photo_state["height_mm"],
         photo_state["px_per_mm"], title=photo_state["title"])
     return sheet, info
-
-
-def warp_photo_to_blueprint_svg():
-    """Uploaded photo -> interactive blueprint SVG, or (None, None)."""
-    if photo_state["image"] is None or photo_state["homography"] is None:
-        return None, None
-    w = int(round(photo_state["width_mm"] * photo_state["px_per_mm"]))
-    h = int(round(photo_state["height_mm"] * photo_state["px_per_mm"]))
-    twin = cv2.warpPerspective(photo_state["image"],
-                               photo_state["homography"], (w, h))
-    svg, info = make_blueprint_svg(
-        twin, photo_state["width_mm"], photo_state["height_mm"],
-        photo_state["px_per_mm"], title=photo_state["title"])
-    return svg, info
 
 
 def calibrate_with_scale(corners, ruler, ruler_mm):
@@ -626,14 +612,6 @@ def photo_preview():
         preview = cv2.resize(preview, (int(out_w * scale), int(out_h * scale)),
                              interpolation=cv2.INTER_AREA)
     return Response(encode_jpeg(preview, quality=80), mimetype="image/jpeg")
-
-
-@app.route("/photo_blueprint.svg")
-def photo_blueprint_svg():
-    svg, _info = warp_photo_to_blueprint_svg()
-    if svg is None:
-        return jsonify({"error": "upload a photo and calibrate it first"}), 400
-    return Response(svg, mimetype="image/svg+xml")
 
 
 @app.route("/status")
