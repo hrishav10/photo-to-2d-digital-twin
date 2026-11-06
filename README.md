@@ -67,6 +67,17 @@ deliberately precise:
 The layout is full-width with no side margins, and the
 interface uses only restrained fade and rise animations.
 
+## Inner parts are detected on the object, not the whole photo
+
+Parts (screen, keys) are found by running edge detection
+on the object crop only, at low thresholds (Canny 25/75).
+The old version ran Canny 50/150 on the whole twin:
+calculator keys are only slightly lighter than the black
+body, so no key edge was ever found and the drawing came
+out with scattered fragments instead of the key grid.
+The whole body itself is also skipped as a part, so it no
+longer gets drawn twice on top of the outline.
+
 ## The outline is the measured rectangle
 
 The blueprint outline is the object's measured bounding

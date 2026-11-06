@@ -58,29 +58,49 @@ def _find_object_rect(twin):
     return cv2.boundingRect(cnt)
 
 
-def _inner_rects(twin):
-    """Smaller rectangular parts inside the twin (calculator buttons,
-    screen, etc.) -> list of (x, y, w, h) in px. Used for the inner
-    line drawing. Best-effort: missed parts just don't get drawn."""
-    gray = cv2.cvtColor(twin, cv2.COLOR_BGR2GRAY)
+def _inner_rects(twin, obj=None):
+    """Smaller rectangular parts inside the object (calculator
+    buttons, screen, etc.) -> list of (x, y, w, h) in twin px.
+    Used for the inner line drawing. Best-effort: missed parts
+    just don't get drawn.
+
+    Two things that used to break this on a real photo:
+    - Canny ran at 50/150 on the whole twin. Calculator keys
+      are only slightly lighter than the black body (gradient
+      ~40), so no key edge was ever found and the drawing came
+      out with scattered fragments instead of the key grid.
+      It now runs at 25/75, on the object crop only.
+    - The whole body itself used to pass the size filter and
+      get drawn as a "part" on top of the outline. A rect that
+      is ~the whole object is now skipped.
+    """
+    if obj is None:
+        obj = _find_object_rect(twin)
+    if obj is None:
+        return []
+    ox, oy, ow, oh = obj
+    crop = twin[oy:oy + oh, ox:ox + ow]
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(gray, 50, 150)
+    edges = cv2.Canny(gray, 25, 75)
     contours, _ = cv2.findContours(edges, cv2.RETR_TREE,
                                    cv2.CHAIN_APPROX_SIMPLE)
-    h, w = gray.shape
     out = []
     for c in contours:
         area = cv2.contourArea(c)
-        if area < 200 or area > 0.25 * h * w:
+        if area < 200 or area > 0.25 * ow * oh:
             continue
         x, y, rw, rh = cv2.boundingRect(c)
         if rw < 8 or rh < 8:
+            continue
+        # the whole body is not a part
+        if rw > 0.9 * ow and rh > 0.9 * oh:
             continue
         # keep roughly rectangular parts
         approx = cv2.approxPolyDP(c, 0.02 * cv2.arcLength(c, True), True)
         if len(approx) < 4:
             continue
-        out.append((x, y, rw, rh))
+        out.append((x + ox, y + oy, rw, rh))
     # de-duplicate near-identical rects (keep the largest of a cluster)
     out.sort(key=lambda r: r[2] * r[3], reverse=True)
     kept = []
@@ -189,7 +209,7 @@ def make_blueprint_svg(twin, width_mm, height_mm, px_per_mm,
         f'data-x-mm="{mm(x):.1f}" data-y-mm="{mm(y):.1f}" '
         f'x="{ox + x}" y="{oy + y}" width="{w}" height="{h}" '
         f'fill="none" stroke="#fff" stroke-width="3"/>')
-    for i, (ix, iy, iw, ih) in enumerate(_inner_rects(twin)):
+    for i, (ix, iy, iw, ih) in enumerate(_inner_rects(twin, obj)):
         parts.append(
             f'<rect class="part inner" data-name="Part {i + 1}" '
             f'data-w-mm="{mm(iw):.1f}" data-h-mm="{mm(ih):.1f}" '
@@ -284,7 +304,7 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
     x, y, w, h = obj
     cv2.rectangle(sheet, (ox + x, oy + y), (ox + x + w, oy + y + h),
                   WHITE, 3, cv2.LINE_AA)
-    for (ix, iy, iw, ih) in _inner_rects(twin):
+    for (ix, iy, iw, ih) in _inner_rects(twin, obj):
         cv2.rectangle(sheet, (ox + ix, oy + iy), (ox + ix + iw, oy + iy + ih),
                       WHITE, 2, cv2.LINE_AA)
 
