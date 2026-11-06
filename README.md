@@ -88,6 +88,31 @@ out with scattered fragments instead of the key grid.
 The whole body itself is also skipped as a part, so it no
 longer gets drawn twice on top of the outline.
 
+## Every object gets measured, not just the biggest
+
+The blueprint finds *all* objects on the sheet
+(`_find_object_rects` in `blueprint.py`): each one gets
+its own white outline, its own dimension lines (width
+above it, height on its outer side) and its own centre
+lines. The title block notes the count ("2 OBJECTS").
+The status message and the Blueprint card footer list
+every object's size. Before, only the largest blob was
+outlined and a second board on the sheet was drawn but
+never measured.
+
+Each outline is tightened to the board itself
+(`_tighten_rect`): a side is shrunk in until it is more
+than half filled, so a USB plug sticking out of the top
+(or pins past the edge) no longer inflates the reading
+— an Uno that read 84 mm tall now reads its true 69.
+Tightening only applies to roughly rectangular shapes;
+a curved object (guitar) keeps its full bounding box.
+
+The sheet frame is drawn from the known twin bounds,
+not from the photo's edges — the photo's sheet border
+only ever drew in fragments (top 59%, sides patchy),
+so the frame is now a complete rectangle, always.
+
 ## The edge drawing shows every line
 
 The blueprint's line drawing runs Canny 25/75 with no

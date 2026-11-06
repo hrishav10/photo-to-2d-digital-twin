@@ -450,7 +450,10 @@ function showResults(j) {
   document.getElementById('twinEmpty').style.display = 'none';
   document.getElementById('blueprintEmpty').style.display = 'none';
   document.getElementById('twinMeta').textContent = `${j.twin_px[0]}×${j.twin_px[1]} px · ${j.blueprint.ref_w_mm}×${j.blueprint.ref_h_mm} mm`;
-  document.getElementById('blueprintMeta').textContent = `Object ${j.blueprint.object_w_mm} × ${j.blueprint.object_h_mm} mm`;
+  const bpi = j.blueprint;
+  document.getElementById('blueprintMeta').textContent = bpi.objects && bpi.objects.length > 1
+    ? `${bpi.objects.length} objects: ` + bpi.objects.map(o => `${o.w_mm} × ${o.h_mm} mm`).join(', ')
+    : `Object ${bpi.object_w_mm} × ${bpi.object_h_mm} mm`;
 }
 
 async function applyPhotoCalib() {

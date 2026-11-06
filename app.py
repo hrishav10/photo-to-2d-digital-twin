@@ -381,6 +381,16 @@ def snapshot_twin():
                              "attachment; filename=twin_topdown.png"})
 
 
+def _objects_message(info):
+    """One line listing every measured object, for the status msg."""
+    objs = info.get("objects") or []
+    if len(objs) > 1:
+        parts = ", ".join(f"{o['w_mm']} x {o['h_mm']} mm" for o in objs)
+        return f"Objects ({len(objs)}): {parts}. "
+    return (f"Object: {info['object_w_mm']} x "
+            f"{info['object_h_mm']} mm. ")
+
+
 # ---------------------------------------------------------------- photo routes
 @app.route("/upload_photo", methods=["POST"])
 def upload_photo():
@@ -508,12 +518,12 @@ def photo_calibrate():
     photo_state["height_mm"] = height_mm
     photo_state["px_per_mm"] = px_per_mm
     _sheet, info = warp_photo_to_blueprint()
+    obj_txt = _objects_message(info)
     return jsonify({"ok": True, "twin_px": [out_w, out_h],
                     "blueprint": info,
                     "message": f"Photo twin ready: {out_w}x{out_h} px = "
                                f"{width_mm:.0f}x{height_mm:.0f} mm. "
-                               f"Object: {info['object_w_mm']} x "
-                               f"{info['object_h_mm']} mm. "
+                               f"{obj_txt}"
                                "Measure: distance_px / "
                                f"{px_per_mm:g} = distance_mm"})
 
@@ -601,14 +611,14 @@ def photo_calibrate_scale():
     photo_state["px_per_mm"] = px_per_mm
     photo_state["calibration_mode"] = "scale"
     _sheet, info = warp_photo_to_blueprint()
+    obj_txt = _objects_message(info)
     return jsonify({"ok": True, "twin_px": [out_w, out_h],
                     "px_per_mm": round(px_per_mm, 3),
                     "area_mm": [round(width_mm, 1), round(height_mm, 1)],
                     "blueprint": info,
                     "message": f"Scale calibration ready: area "
                                f"{width_mm:.0f} x {height_mm:.0f} mm, "
-                               f"object {info['object_w_mm']} x "
-                               f"{info['object_h_mm']} mm "
+                               f"{obj_txt}"
                                f"({px_per_mm:.2f} px/mm from the "
                                f"{ruler_mm:.0f} mm scale)."})
 
