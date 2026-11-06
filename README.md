@@ -98,6 +98,23 @@ key edges at all and the key outlines were missing. At
 tracing, with the lines actually there. No rectangles
 are added: the lines are the traced edges.
 
+## Auto-detect: no clicking corners
+
+Upload a photo and the corners are found for you
+(`detect.py`, `POST /photo_autodetect`): the largest
+clean quadrilateral in the photo — the A4 sheet in A4
+mode, the object itself in scale mode — refined to
+sub-pixel accuracy with `cornerSubPix`, so the placed
+points land exactly on the real corners. In scale mode
+it also finds the ruler (a long thin rectangle) and
+places its two ends. The Calibrate panel opens with
+the points already placed: drag any corner to adjust,
+then Generate. If nothing clean is found, it says so
+and you click the corners as before. An "Auto-detect"
+button in the panel re-runs it any time. Tested on
+synthetic perspective photos: sheet and object corners
+within 0.6 px, ruler ends within 2.6 px.
+
 ## The outline is the measured rectangle
 
 The blueprint outline is the object's measured bounding

@@ -189,12 +189,13 @@
   </div>
   <p id="photoClickInfo">0 of 4 points</p>
   <div class="point-list" id="pointList"></div>
-  <p style="color:#8b8b99">Drag a point to move it. Backspace removes the last point. Preview checks the selection before you apply it.</p>
+  <p style="color:#8b8b99">Corners are auto-detected on upload — drag a point to move it. Backspace removes the last point. Preview checks the selection before you apply it.</p>
   <div class="btn-row">
     <button class="primary" id="generateBtn" onclick="applyPhotoCalib()">Generate</button>
     <button onclick="previewPhotoCalib()">Preview</button>
     <button onclick="undoPhotoClick()">Undo last point</button>
     <button onclick="clearPhotoClicks()">Clear</button>
+    <button onclick="autoDetect()">Auto-detect</button>
     <button onclick="autoPhotoAruco()">Auto-detect ArUco</button>
     <button onclick="closePhotoCalib()">Close</button>
   </div>
@@ -220,6 +221,8 @@
 let photoClicks = [];
 let refMode = 'a4';
 let calibImg = null;
+let pendingAutoPoints = null;
+let pendingAutoRuler = null;
 let cursorPos = null;
 let dragIdx = -1;
 let downPos = null;
@@ -316,8 +319,9 @@ async function uploadPhoto() {
     document.getElementById('blueprintMeta').textContent = '';
     document.getElementById('fileName').textContent = j.filename;
     refreshStatus();
-    // next step pops up on its own: open Calibrate once the photo lands
-    setTimeout(openPhotoCalib, 400);
+    // next step pops up on its own: detect the corners, then
+    // Calibrate opens with the points already placed
+    setTimeout(autoDetect, 400);
   }
 }
 
@@ -372,6 +376,12 @@ async function openPhotoCalib() {
     const c = document.getElementById('photoCanvas');
     c.width = img.width; c.height = img.height;
     setRefMode();
+    if (pendingAutoPoints) {
+      photoClicks = pendingAutoPoints.slice();
+      if (pendingAutoRuler) photoClicks = photoClicks.concat(pendingAutoRuler);
+      pendingAutoPoints = null; pendingAutoRuler = null;
+      redrawCanvas();
+    }
   };
   img.src = '/uploaded.jpg?t=' + Date.now();
   document.getElementById('calib').scrollIntoView({ behavior: 'smooth' });
@@ -456,6 +466,20 @@ async function applyPhotoCalib() {
     if (j.ok) { showResults(j); closePhotoCalib(); refreshStatus(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   } finally {
     btn.disabled = false; btn.textContent = 'Generate';
+  }
+}
+
+async function autoDetect() {
+  const r = await fetch('/photo_autodetect', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ mode: refMode }) });
+  const j = await r.json();
+  if (j.ok) {
+    pendingAutoPoints = j.points;
+    pendingAutoRuler = j.ruler || null;
+    openPhotoCalib();
+    showMsg(j.message);
+  } else {
+    openPhotoCalib();
+    showMsg(j.message || 'Could not detect — click the corners.');
   }
 }
 

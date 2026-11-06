@@ -5,9 +5,10 @@ Photo to 2D Digital Twin — simple Flask app
 Two ways to get a 2D twin, in one app:
 
   A. PHOTO MODE (the original photo-to-2D idea)
-     Upload one photo -> click the 4 corners of a known-size
-     reference (an A4 sheet, 210 x 297 mm) -> instantly get the
-     top-down twin in the other window, at 5 px/mm.
+     Upload one photo -> corners are auto-detected (the A4
+     sheet, or the object + ruler in scale mode) -> instantly
+     get the top-down twin in the other window, at 5 px/mm.
+     Clicking the 4 corners still works as a fallback.
      Same pipeline as photo_to_2d.py, but in the browser.
 
   B. BIG OBJECTS — 30 cm scale reference
@@ -64,6 +65,7 @@ import numpy as np
 from flask import Flask, Response, jsonify, render_template, request, send_file
 
 from blueprint import make_blueprint
+from detect import detect_quad, detect_ruler
 
 app = Flask(__name__)
 
@@ -514,6 +516,40 @@ def photo_calibrate():
                                f"{info['object_h_mm']} mm. "
                                "Measure: distance_px / "
                                f"{px_per_mm:g} = distance_mm"})
+
+
+@app.route("/photo_autodetect", methods=["POST"])
+def photo_autodetect():
+    """Find the reference/object corners in the uploaded photo, no
+    clicking. Body: {"mode": "a4"|"scale"}.
+    a4: largest quad = the A4 sheet. scale: largest quad = the
+    object, plus a long thin quad = the ruler (if found).
+    Points come back in photo pixels, TL/TR/BR/BL, sub-pixel
+    refined. Returns ok False when nothing clean is found — the
+    UI then falls back to clicking."""
+    if photo_state["image"] is None:
+        return jsonify({"error": "upload a photo first"}), 400
+    d = request.get_json(silent=True) or {}
+    mode = d.get("mode", "a4")
+    img = photo_state["image"]
+    quad = detect_quad(img, mode=mode)
+    if quad is None:
+        what = "sheet" if mode == "a4" else "object"
+        return jsonify({"ok": False,
+                        "message": f"Could not find the {what} — click the corners."})
+    points = [[int(round(x)), int(round(y))] for x, y in quad]
+    ruler = None
+    if mode == "scale":
+        r = detect_ruler(img, quad)
+        if r is not None:
+            ruler = [[int(round(x)), int(round(y))] for x, y in r]
+            msg = "Object and scale detected — drag any corner to adjust, then Generate."
+        else:
+            msg = "Object detected — now click the 2 ends of the scale, then Generate."
+    else:
+        msg = "Sheet detected — drag any corner to adjust, then Generate."
+    return jsonify({"ok": True, "points": points, "ruler": ruler,
+                    "message": msg})
 
 
 @app.route("/photo_aruco", methods=["POST"])
