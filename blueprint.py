@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Twin -> Technical Drawing: turn a top-down twin photo into a
-technical drawing, like a submarine blueprint in a game.
+"""Twin -> Blueprint: turn a top-down twin photo into a
+blueprint drawing, like a submarine blueprint in a game.
 
   Input : warped top-down twin (BGR), its real size in mm, px/mm
   Output: blueprint sheet (BGR) — same twin, but drawn as:
@@ -220,8 +220,8 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
                 f"GRID 10 mm  |  {today}",
                 (24, ty + 52), cv2.FONT_HERSHEY_SIMPLEX, 0.6, CYAN, 1,
                 cv2.LINE_AA)
-    cv2.putText(sheet, "TECHNICAL DRAWING", (sheet.shape[1] - 340, ty + 22),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.7, CYAN, 2, cv2.LINE_AA)
+    cv2.putText(sheet, "BLUEPRINT", (sheet.shape[1] - 190, ty + 22),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.9, CYAN, 2, cv2.LINE_AA)
 
     info = {
         "object_w_mm": round(obj_w_mm, 1),

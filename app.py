@@ -40,7 +40,7 @@ Windows (photo only, for now):
   Click any window to open it big; click X / Esc / outside to close.
 
 The blueprint (blueprint.py) is the same twin redrawn as a
-technical drawing: white edges on blueprint-blue, dimension
+blueprint: white edges on blueprint-blue, dimension
 lines in real mm, centre lines, title block. The real twin
 stays visible too, so you can check the blueprint against it.
 

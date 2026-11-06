@@ -7,115 +7,153 @@
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; width: 100%; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #111; color: #eee; font-size: 14px; line-height: 1.5; }
-  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #0e0e10; color: #e8e8ea; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-  header { padding: 14px 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid #222; animation: fade .3s ease both; }
-  header h1 { font-size: 17px; margin: 0; font-weight: 600; letter-spacing: -0.01em; }
-  header h1 span { color: #9ca3af; font-weight: 400; }
-  .badge { padding: 3px 10px; border-radius: 999px; font-size: 12px; background: #222; color: #bbb; border: 1px solid #333; }
-  .badge.ok { background: #123524; color: #a7f3d0; border-color: #1d4d33; }
-  button, select, input { padding: 8px 12px; border-radius: 6px; border: 1px solid #444; background: #1c1c1c; color: #eee; cursor: pointer; font-size: 13px; transition: background .15s ease, border-color .15s ease; }
-  button:hover { background: #262626; border-color: #555; }
-  button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
-  button.primary:hover { background: #1d4ed8; }
-  button:disabled { opacity: .45; cursor: default; }
-  .hint { font-size: 13px; color: #9ca3af; padding: 10px 12px 0; margin: 0; }
-  h2.section { font-size: 13px; font-weight: 600; color: #bbb; margin: 16px 12px 8px; letter-spacing: .04em; text-transform: uppercase; }
-  .controls { padding: 0 12px 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .controls label { font-size: 13px; color: #9ca3af; }
-  main { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 12px 12px; width: 100%; }
-  @media (max-width: 700px) { main { grid-template-columns: 1fr; } }
-  .toggle { display: flex; gap: 0; border: 1px solid #444; border-radius: 6px; overflow: hidden; }
-  .toggle button { border: none; border-radius: 0; padding: 4px 10px; font-size: 12px; background: #1c1c1c; }
-  .toggle button.active { background: #2563eb; color: #fff; }
-  .window { background: #000; border: 1px solid #2a2a2a; border-radius: 8px; overflow: hidden; animation: rise .35s ease both; transition: border-color .2s ease; }
+  @keyframes pop { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: scale(1); } }
+
+  /* top bar */
+  header { display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-bottom: 1px solid #222226; animation: fade .35s ease both; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
+  header h1 span { color: #8e8e96; font-weight: 450; }
+  .status { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #a1a1aa; background: #17171a; border: 1px solid #26262b; border-radius: 999px; padding: 4px 11px; }
+  .status .dot { width: 7px; height: 7px; border-radius: 50%; background: #71717a; flex: none; }
+  .status.ok { color: #a7f3d0; border-color: #1d4d33; }
+  .status.ok .dot { background: #34d399; }
+  header .spacer { flex: 1; }
+  header label { font-size: 12px; color: #8e8e96; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  input[type="checkbox"] { accent-color: #2563eb; }
+
+  /* toolbar */
+  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px; animation: fade .35s .05s ease both; }
+  .toolbar .sep { width: 1px; height: 24px; background: #26262b; margin: 0 4px; }
+  button, input[type="text"], input[type="number"] { font: inherit; font-size: 13px; color: #e8e8ea; background: #17171a; border: 1px solid #2e2e33; border-radius: 7px; padding: 7px 12px; transition: background .15s ease, border-color .15s ease, transform .12s ease; }
+  button { cursor: pointer; }
+  button:hover { background: #1f1f23; border-color: #3f3f46; }
+  button:active { transform: scale(.98); }
+  button.primary { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 550; }
+  button.primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
+  button:disabled { opacity: .45; cursor: default; transform: none; }
+  input[type="file"] { font-size: 12px; color: #a1a1aa; max-width: 220px; }
+  .toolbar label { font-size: 12px; color: #8e8e96; display: inline-flex; align-items: center; gap: 6px; }
+  .toolbar input[type="text"] { width: 140px; }
+  .toolbar input[type="text"]::placeholder { color: #63636b; }
+
+  /* windows */
+  main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 4px 16px 16px; width: 100%; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 720px) { main { grid-template-columns: 1fr; } }
+  .window { background: #121214; border: 1px solid #232328; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; animation: rise .45s cubic-bezier(.22,.61,.36,1) both; transition: border-color .2s ease, transform .2s ease; }
   .window:nth-child(2) { animation-delay: .06s; }
-  .window:hover { border-color: #3d3d3d; }
-  .window h2 { font-size: 13px; margin: 0; padding: 10px 12px; background: #181818; display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
-  .window h2 span { color: #9ca3af; font-weight: 400; }
-  .expand { background: none; border: 1px solid #444; padding: 2px 9px; font-size: 12px; }
-  .window img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: contain; background: #000; cursor: zoom-in; animation: fade .3s ease both; }
-  #photoTwinImg, #photoDrawingImg { aspect-ratio: auto; }
-  #calib { display: none; margin: 0 12px 12px; background: #181818; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; animation: rise .3s ease both; }
-  #calib h3 { margin: 0 0 10px; font-size: 14px; }
-  #calib p { margin: 8px 0; font-size: 13px; color: #bbb; }
-  .calib-wrap { position: relative; display: inline-block; max-width: 100%; margin-top: 10px; }
-  canvas#photoCanvas { max-width: 100%; cursor: crosshair; border: 1px solid #444; border-radius: 6px; display: block; }
-  #previewBox { margin-top: 12px; max-width: 420px; }
-  #previewBox img { width: 100%; display: block; border: 1px solid #444; border-radius: 6px; animation: fade .3s ease both; }
-  #previewBox p { font-size: 12px; color: #9ca3af; margin: 6px 0 0; }
-  .point-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  .point-chip { font-size: 12px; font-variant-numeric: tabular-nums; background: #222; border: 1px solid #333; border-radius: 999px; padding: 3px 9px; color: #ccc; }
+  .window:nth-child(3) { animation-delay: .12s; }
+  .window:hover { border-color: #34343a; }
+  .window header { padding: 11px 14px; border-bottom: 1px solid #1f1f23; background: none; }
+  .window header .num { font-size: 11px; font-weight: 650; color: #60a5fa; letter-spacing: .06em; }
+  .window header h2 { font-size: 13px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+  .window header .meta { font-size: 12px; color: #8e8e96; margin-left: 2px; }
+  .window header .spacer { flex: 1; }
+  .expand { background: none; border: 1px solid #2e2e33; padding: 3px 10px; font-size: 12px; border-radius: 6px; }
+  .window .body { background: #000; min-height: 180px; display: flex; align-items: center; justify-content: center; }
+  .window img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: contain; background: #000; cursor: zoom-in; animation: fade .35s ease both; }
+  #photoTwinImg, #photoBlueprintImg { aspect-ratio: auto; }
+  .window footer { padding: 9px 14px; font-size: 12px; color: #8e8e96; border-top: 1px solid #1f1f23; min-height: 34px; display: flex; align-items: center; }
+  .window footer:empty::before { content: "—"; color: #3f3f46; }
+
+  /* calibrate panel */
+  #calib { display: none; margin: 0 16px 16px; background: #121214; border: 1px solid #232328; border-radius: 12px; padding: 18px; animation: pop .25s ease both; }
+  #calib h3 { margin: 0 0 12px; font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+  #calib p { margin: 10px 0; font-size: 13px; color: #a1a1aa; }
+  .seg { display: inline-flex; border: 1px solid #2e2e33; border-radius: 8px; overflow: hidden; }
+  .seg label { padding: 7px 13px; font-size: 13px; color: #a1a1aa; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .seg label + label { border-left: 1px solid #2e2e33; }
+  .seg label:has(input:checked) { background: #2563eb; color: #fff; }
+  .seg input { display: none; }
+  .calib-wrap { position: relative; display: inline-block; max-width: 100%; margin-top: 12px; }
+  canvas#photoCanvas { max-width: 100%; cursor: crosshair; border: 1px solid #2e2e33; border-radius: 8px; display: block; background: #000; }
+  #previewBox { margin-top: 14px; max-width: 460px; }
+  #previewBox img { width: 100%; display: block; border: 1px solid #2e2e33; border-radius: 8px; animation: fade .3s ease both; }
+  #previewBox p { font-size: 12px; color: #8e8e96; margin: 6px 0 0; }
+  .point-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .point-chip { font-size: 12px; font-variant-numeric: tabular-nums; background: #17171a; border: 1px solid #2e2e33; border-radius: 999px; padding: 3px 10px; color: #c4c4ca; animation: fade .2s ease both; }
   .point-chip.ruler { border-color: #0e7490; color: #67e8f9; }
-  #msg { padding: 0 12px 12px; color: #a7f3d0; min-height: 1.2em; font-size: 13px; }
-  #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.94); z-index: 100; padding: 24px; box-sizing: border-box; overflow: auto; animation: fade .2s ease both; }
-  #lightbox.open { display: block; }
-  #lightbox .lb-inner { max-width: 1400px; margin: 0 auto; background: #000; border: 1px solid #444; border-radius: 8px; overflow: hidden; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  #msg { padding: 0 16px 16px; color: #a7f3d0; min-height: 1.2em; font-size: 13px; }
+
+  /* lightbox */
+  #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.94); z-index: 100; padding: 28px; box-sizing: border-box; overflow: auto; }
+  #lightbox.open { display: block; animation: fade .2s ease both; }
+  #lightbox .lb-inner { max-width: 1400px; margin: 0 auto; background: #000; border: 1px solid #2e2e33; border-radius: 12px; overflow: hidden; animation: pop .25s ease both; }
   #lightbox .lb-inner img { width: 100%; display: block; }
-  #lbClose { position: fixed; top: 12px; right: 16px; z-index: 101; font-size: 15px; padding: 8px 14px; }
-  #lbTitle { color: #eee; text-align: center; padding: 8px; font-size: 13px; }
+  #lbClose { position: fixed; top: 14px; right: 18px; z-index: 101; font-size: 13px; padding: 8px 14px; }
+  #lbTitle { color: #e8e8ea; text-align: center; padding: 10px; font-size: 13px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Photo to 2D Digital Twin</h1>
-  <span id="statusBadge" class="badge">Checking</span>
+  <h1>Photo to 2D Digital Twin <span>· Blueprint</span></h1>
+  <span id="statusBadge" class="status"><span class="dot"></span><span id="statusText">Checking</span></span>
+  <span class="spacer"></span>
   <label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> 100 mm grid</label>
 </header>
 
-<p class="hint">One photo + a known reference = a top-down twin and a dimensioned technical drawing. Small object: A4 (210 × 297 mm). Larger object: a 30 cm scale beside it.</p>
-
-<h2 class="section">Photo</h2>
-<div class="controls">
+<div class="toolbar">
   <input type="file" id="photoFile" accept="image/*">
   <button class="primary" onclick="uploadPhoto()">Upload photo</button>
   <button onclick="openPhotoCalib()">Calibrate</button>
-  <label>Object name <input id="photoTitle" type="text" value="" placeholder="e.g. Submarine" style="width:150px"></label>
+  <span class="sep"></span>
+  <label>Object <input id="photoTitle" type="text" value="" placeholder="e.g. Submarine"></label>
+  <span class="sep"></span>
   <a href="/photo_twin.png"><button>Download twin PNG</button></a>
-  <a href="/photo_blueprint.jpg"><button>Download technical drawing JPG</button></a>
+  <a href="/photo_blueprint.jpg"><button>Download blueprint JPG</button></a>
 </div>
 
 <main>
   <section class="window">
-    <h2>01 — Photo <span>As taken</span> <button class="expand" onclick="openLightbox('photo')">Expand</button></h2>
-    <img id="photoImg" src="" alt="Upload a photo to see it here" onclick="openLightbox('photo')">
+    <header><span class="num">01</span><h2>Photo</h2><span class="meta">As taken</span><span class="spacer"></span><button class="expand" onclick="openLightbox('photo')">Expand</button></header>
+    <div class="body"><img id="photoImg" src="" alt="Upload a photo to see it here" onclick="openLightbox('photo')"></div>
+    <footer id="photoMeta"></footer>
   </section>
   <section class="window">
-    <h2>02 — Twin <span>Top-down, 5 px/mm</span> <span class="toggle"><button id="toggleReal" class="active" onclick="setTwinView('real')">Real</button><button id="toggleDrawing" onclick="setTwinView('drawing')">Technical Drawing</button></span> <button class="expand" onclick="openLightbox('twin')">Expand</button></h2>
-    <img id="photoTwinImg" src="" alt="The twin appears here after calibration" onclick="openLightbox('twin')">
-    <img id="photoDrawingImg" src="" alt="The technical drawing appears here after calibration" onclick="openLightbox('twin')" style="display:none">
+    <header><span class="num">02</span><h2>Twin</h2><span class="meta">Top-down · 5 px/mm</span><span class="spacer"></span><button class="expand" onclick="openLightbox('twin')">Expand</button></header>
+    <div class="body"><img id="photoTwinImg" src="" alt="The twin appears here after calibration" onclick="openLightbox('twin')"></div>
+    <footer id="twinMeta"></footer>
+  </section>
+  <section class="window">
+    <header><span class="num">03</span><h2>Blueprint</h2><span class="meta">Dimensioned · mm</span><span class="spacer"></span><button class="expand" onclick="openLightbox('blueprint')">Expand</button></header>
+    <div class="body"><img id="photoBlueprintImg" src="" alt="The blueprint appears here after calibration" onclick="openLightbox('blueprint')"></div>
+    <footer id="blueprintMeta"></footer>
   </section>
 </main>
 
 <section id="calib">
   <h3>Calibrate — click in order</h3>
   <p>
-    <label><input type="radio" name="refMode" value="a4" checked onchange="setRefMode()"> A4 sheet (210 × 297 mm) — click its 4 corners</label><br>
-    <label><input type="radio" name="refMode" value="scale" onchange="setRefMode()"> 30 cm scale — click the object's 4 corners, then the scale's 2 ends (0 cm and 30 cm)</label>
+    <span class="seg">
+      <label><input type="radio" name="refMode" value="a4" checked onchange="setRefMode()"> A4 sheet · 210 × 297 mm</label><label><input type="radio" name="refMode" value="scale" onchange="setRefMode()"> 30 cm scale</label>
+    </span>
   </p>
   <p id="refFieldsA4">
-    <label>Width (mm) <input id="pwMm" type="number" value="210" style="width:90px"></label>
-    <label>Height (mm) <input id="phMm" type="number" value="297" style="width:90px"></label>
+    <label>Width (mm) <input id="pwMm" type="number" value="210" style="width:80px"></label>
+    <label>Height (mm) <input id="phMm" type="number" value="297" style="width:80px"></label>
   </p>
   <p id="refFieldsScale" style="display:none">
-    <label>Scale length (mm) <input id="rulerMm" type="number" value="300" style="width:90px"></label>
-    <span style="color:#9ca3af">Place the scale flat beside the object, in the same plane, fully in frame.</span>
+    <label>Scale length (mm) <input id="rulerMm" type="number" value="300" style="width:80px"></label>
+    <span style="color:#8e8e96">Place the scale flat beside the object, in the same plane, fully in frame.</span>
   </p>
   <div class="calib-wrap">
     <canvas id="photoCanvas"></canvas>
   </div>
   <p id="photoClickInfo">0 of 4 points</p>
   <div class="point-list" id="pointList"></div>
-  <p style="color:#9ca3af">Drag a point to move it. Backspace removes the last point. Preview checks the selection before you apply it.</p>
-  <p>
-    <button class="primary" onclick="applyPhotoCalib()">Apply — make twin and technical drawing</button>
+  <p style="color:#8e8e96">Drag a point to move it. Backspace removes the last point. Preview checks the selection before you apply it.</p>
+  <div class="btn-row">
+    <button class="primary" onclick="applyPhotoCalib()">Apply — make twin and blueprint</button>
     <button onclick="previewPhotoCalib()">Preview</button>
     <button onclick="undoPhotoClick()">Undo last point</button>
     <button onclick="clearPhotoClicks()">Clear</button>
     <button onclick="autoPhotoAruco()">Auto-detect ArUco</button>
     <button onclick="closePhotoCalib()">Close</button>
-  </p>
+  </div>
   <div id="previewBox"></div>
 </section>
 
@@ -128,18 +166,10 @@
 </div>
 
 <script>
-let twinView = 'real';
-function setTwinView(v) {
-  twinView = v;
-  document.getElementById('toggleReal').className = v === 'real' ? 'active' : '';
-  document.getElementById('toggleDrawing').className = v === 'drawing' ? 'active' : '';
-  document.getElementById('photoTwinImg').style.display = v === 'real' ? '' : 'none';
-  document.getElementById('photoDrawingImg').style.display = v === 'drawing' ? '' : 'none';
-}
 let photoClicks = [];
 let refMode = 'a4';
-let calibImg = null;      // base image drawn on the canvas
-let cursorPos = null;     // last cursor position in canvas px
+let calibImg = null;
+let cursorPos = null;
 let dragIdx = -1;
 let downPos = null;
 function showMsg(t) { document.getElementById('msg').textContent = t; }
@@ -147,11 +177,12 @@ function showMsg(t) { document.getElementById('msg').textContent = t; }
 async function refreshStatus() {
   const s = await (await fetch('/status')).json();
   const b = document.getElementById('statusBadge');
-  if (!s.photo_uploaded) { b.textContent = 'No photo yet'; b.className = 'badge'; return; }
-  b.textContent = s.photo_calibrated
+  const t = document.getElementById('statusText');
+  if (!s.photo_uploaded) { t.textContent = 'No photo yet'; b.className = 'status'; return; }
+  t.textContent = s.photo_calibrated
     ? `${s.photo_title || 'Object'} — ${s.photo_twin_px[0]}×${s.photo_twin_px[1]} px, ${s.calibration_mode === 'scale' ? '30 cm scale' : 'A4'}`
     : 'Photo uploaded — not calibrated';
-  b.className = 'badge ' + (s.photo_calibrated ? 'ok' : '');
+  b.className = 'status ' + (s.photo_calibrated ? 'ok' : '');
 }
 refreshStatus(); setInterval(refreshStatus, 3000);
 
@@ -163,7 +194,8 @@ function openLightbox(kind) {
   const get = (id) => document.getElementById(id);
   let src = '', label = '';
   if (kind === 'photo') { src = get('photoImg')?.src; label = 'Photo'; }
-  else { src = twinView === 'drawing' ? get('photoDrawingImg')?.src : get('photoTwinImg')?.src; label = twinView === 'drawing' ? 'Twin — Technical Drawing' : 'Twin'; }
+  else if (kind === 'twin') { src = get('photoTwinImg')?.src; label = 'Twin'; }
+  else { src = get('photoBlueprintImg')?.src; label = 'Blueprint'; }
   if (!src) { showMsg('Calibrate a photo first.'); return; }
   title.textContent = label;
   inner.innerHTML = `<img src="${src}" alt="${label}">`;
@@ -186,7 +218,10 @@ async function uploadPhoto() {
   if (j.ok) {
     document.getElementById('photoImg').src = '/uploaded.jpg?t=' + Date.now();
     document.getElementById('photoTwinImg').src = '';
-    document.getElementById('photoDrawingImg').src = '';
+    document.getElementById('photoBlueprintImg').src = '';
+    document.getElementById('photoMeta').textContent = `${j.filename} · ${j.width_px}×${j.height_px} px`;
+    document.getElementById('twinMeta').textContent = '';
+    document.getElementById('blueprintMeta').textContent = '';
     refreshStatus();
   }
 }
@@ -204,7 +239,6 @@ function redrawCanvas() {
   ctx.clearRect(0, 0, c.width, c.height);
   ctx.drawImage(calibImg, 0, 0);
   if (photoClicks.length === 0) return;
-  // numbered markers
   photoClicks.forEach(([x, y], i) => {
     const isRuler = refMode === 'scale' && i >= 4;
     ctx.fillStyle = isRuler ? '#06b6d4' : '#ef4444';
@@ -212,15 +246,14 @@ function redrawCanvas() {
     ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(String(i + 1), x, y);
   });
-  // point list
   const list = document.getElementById('pointList');
   list.innerHTML = photoClicks.map(([x, y], i) => {
     const isRuler = refMode === 'scale' && i >= 4;
     const label = refMode === 'scale' ? (i < 4 ? `Corner ${i + 1}` : `Scale ${i - 3}`) : `Corner ${i + 1}`;
     return `<span class="point-chip${isRuler ? ' ruler' : ''}">${label} · ${x}, ${y}</span>`;
   }).join('');
-  const need2 = refMode === 'a4' ? 4 : 6;
-  document.getElementById('photoClickInfo').textContent = `${photoClicks.length} of ${need2} points` +
+  const need = refMode === 'a4' ? 4 : 6;
+  document.getElementById('photoClickInfo').textContent = `${photoClicks.length} of ${need} points` +
     (refMode === 'scale' && photoClicks.length < 4 ? ' — object corners first' : refMode === 'scale' && photoClicks.length < 6 ? ' — now the 2 scale ends' : '');
 }
 
@@ -267,7 +300,7 @@ canvasEl.addEventListener('mouseleave', () => { cursorPos = null; redrawCanvas()
 canvasEl.addEventListener('mouseup', (e) => {
   if (dragIdx >= 0) { dragIdx = -1; redrawCanvas(); return; }
   const [x, y] = canvasPos(e);
-  if (downPos && Math.hypot(x - downPos[0], y - downPos[1]) > 4) return; // it was a drag, not a click
+  if (downPos && Math.hypot(x - downPos[0], y - downPos[1]) > 4) return;
   const need = refMode === 'a4' ? 4 : 6;
   if (photoClicks.length >= need) return;
   photoClicks.push([Math.round(x), Math.round(y)]);
@@ -310,7 +343,9 @@ async function applyPhotoCalib() {
   if (j.ok) {
     const t = Date.now();
     document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoDrawingImg').src = '/photo_blueprint.jpg?t=' + t;
+    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
+    document.getElementById('twinMeta').textContent = `${j.twin_px[0]}×${j.twin_px[1]} px · ${j.blueprint.ref_w_mm}×${j.blueprint.ref_h_mm} mm`;
+    document.getElementById('blueprintMeta').textContent = `Object ${j.blueprint.object_w_mm} × ${j.blueprint.object_h_mm} mm`;
     closePhotoCalib(); refreshStatus();
   }
 }
@@ -325,7 +360,9 @@ async function autoPhotoAruco() {
   if (j.ok) {
     const t = Date.now();
     document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoDrawingImg').src = '/photo_blueprint.jpg?t=' + Date.now();
+    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
+    document.getElementById('twinMeta').textContent = `${j.twin_px[0]}×${j.twin_px[1]} px · ${j.blueprint.ref_w_mm}×${j.blueprint.ref_h_mm} mm`;
+    document.getElementById('blueprintMeta').textContent = `Object ${j.blueprint.object_w_mm} × ${j.blueprint.object_h_mm} mm`;
     refreshStatus();
   }
 }
