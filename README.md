@@ -58,9 +58,6 @@ deliberately precise:
 
 - As you click, the selected area is drawn as a polygon
   with numbered points, plus a guide line to the cursor.
-- A magnifier in the top-right corner shows the area under
-  the cursor at 3×, with a crosshair, for placing corners
-  exactly.
 - Drag any point to move it. Backspace (or Undo) removes
   the last point.
 - **Preview** warps the photo from the points as clicked,

@@ -41,7 +41,6 @@
   #calib p { margin: 8px 0; font-size: 13px; color: #bbb; }
   .calib-wrap { position: relative; display: inline-block; max-width: 100%; margin-top: 10px; }
   canvas#photoCanvas { max-width: 100%; cursor: crosshair; border: 1px solid #444; border-radius: 6px; display: block; }
-  #magnifier { position: absolute; top: 8px; right: 8px; width: 132px; height: 132px; border: 1px solid #666; border-radius: 6px; background: #000; pointer-events: none; display: none; }
   #previewBox { margin-top: 12px; max-width: 420px; }
   #previewBox img { width: 100%; display: block; border: 1px solid #444; border-radius: 6px; animation: fade .3s ease both; }
   #previewBox p { font-size: 12px; color: #9ca3af; margin: 6px 0 0; }
@@ -107,7 +106,6 @@
   </p>
   <div class="calib-wrap">
     <canvas id="photoCanvas"></canvas>
-    <canvas id="magnifier" width="132" height="132"></canvas>
   </div>
   <p id="photoClickInfo">0 of 4 points</p>
   <div class="point-list" id="pointList"></div>
@@ -188,7 +186,7 @@ async function uploadPhoto() {
   }
 }
 
-// ---------- selection: polygon, drag, magnifier, preview ----------
+// ---------- selection: polygon, drag, preview ----------
 function canvasPos(e) {
   const c = document.getElementById('photoCanvas'), r = c.getBoundingClientRect();
   return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)];
@@ -235,19 +233,6 @@ function redrawCanvas() {
     (refMode === 'scale' && photoClicks.length < 4 ? ' — object corners first' : refMode === 'scale' && photoClicks.length < 6 ? ' — now the 2 scale ends' : '');
 }
 
-function drawMagnifier() {
-  const mag = document.getElementById('magnifier');
-  if (!calibImg || !cursorPos) { mag.style.display = 'none'; return; }
-  mag.style.display = 'block';
-  const ctx = mag.getContext('2d');
-  const [x, y] = cursorPos, size = 48;
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(calibImg, Math.max(0, x - size / 2), Math.max(0, y - size / 2), size, size, 0, 0, 132, 132);
-  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(66, 0); ctx.lineTo(66, 132); ctx.moveTo(0, 66); ctx.lineTo(132, 66); ctx.stroke();
-  ctx.strokeStyle = '#ef4444'; ctx.beginPath(); ctx.arc(66, 66, 5, 0, 7); ctx.stroke();
-}
-
 function setRefMode() {
   refMode = document.querySelector('input[name="refMode"]:checked').value;
   document.getElementById('refFieldsA4').style.display = refMode === 'a4' ? 'block' : 'none';
@@ -285,9 +270,9 @@ canvasEl.addEventListener('mousedown', (e) => {
 canvasEl.addEventListener('mousemove', (e) => {
   cursorPos = canvasPos(e);
   if (dragIdx >= 0) { photoClicks[dragIdx] = [Math.round(cursorPos[0]), Math.round(cursorPos[1])]; document.getElementById('previewBox').innerHTML = ''; }
-  redrawCanvas(); drawMagnifier();
+  redrawCanvas();
 });
-canvasEl.addEventListener('mouseleave', () => { cursorPos = null; document.getElementById('magnifier').style.display = 'none'; redrawCanvas(); });
+canvasEl.addEventListener('mouseleave', () => { cursorPos = null; redrawCanvas(); });
 canvasEl.addEventListener('mouseup', (e) => {
   if (dragIdx >= 0) { dragIdx = -1; redrawCanvas(); return; }
   const [x, y] = canvasPos(e);
