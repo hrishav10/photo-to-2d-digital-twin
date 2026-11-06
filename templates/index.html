@@ -3,221 +3,111 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Photo to 2D Digital Twin</title>
+<title>Photo to 2D Digital Twin — Blueprint</title>
 <style>
-  :root {
-    --bg: #f4f5f6;
-    --surface: #ffffff;
-    --border: #d8dce0;
-    --border-strong: #b9bfc6;
-    --text: #1a1d21;
-    --muted: #5c6670;
-    --faint: #8a939c;
-    --accent: #0a2e6e;
-    --accent-hover: #0d3a8a;
-    --radius: 6px;
-  }
-  * { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    margin: 0; background: var(--bg); color: var(--text);
-    font-size: 14px; line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-  }
-  .page { max-width: 1280px; margin: 0 auto; padding: 0 24px 48px; }
-
-  /* Header */
-  header {
-    display: flex; align-items: baseline; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap;
-    padding: 20px 0 16px; border-bottom: 1px solid var(--border);
-  }
-  header h1 { font-size: 20px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
-  header h1 span { color: var(--muted); font-weight: 450; }
-  .status { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
-  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); display: inline-block; }
-  .status.ready .dot { background: #1a7f4b; }
-  .lede { color: var(--muted); margin: 12px 0 0; max-width: 72ch; }
-
-  /* Section labels */
-  .section-label {
-    font-size: 12px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--muted); margin: 28px 0 12px;
-  }
-
-  /* Workflow card */
-  .card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 20px;
-  }
-  .steps { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; }
-  .step { display: flex; gap: 10px; align-items: flex-start; max-width: 300px; }
-  .step-num {
-    flex: none; width: 24px; height: 24px; border-radius: 50%;
-    border: 1px solid var(--border-strong); color: var(--muted);
-    font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center;
-  }
-  .step-num.done { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .step h3 { font-size: 13px; margin: 2px 0 2px; font-weight: 650; }
-  .step p { margin: 0; font-size: 13px; color: var(--muted); }
-
-  .field-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-top: 16px; }
-  .field { display: flex; flex-direction: column; gap: 4px; }
-  .field label { font-size: 12px; font-weight: 600; color: var(--muted); }
-  .field input[type="text"], .field input[type="number"], .field input[type="file"] {
-    padding: 8px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius);
-    background: #fff; color: var(--text); font-size: 14px;
-  }
-  .field input:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: var(--accent); }
-
-  button {
-    padding: 8px 14px; border-radius: var(--radius); border: 1px solid var(--border-strong);
-    background: #fff; color: var(--text); font-size: 14px; cursor: pointer;
-  }
-  button:hover { background: #f0f1f2; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.primary:hover { background: var(--accent-hover); }
-  button:disabled { opacity: 0.5; cursor: default; }
-  .btn-quiet { border-color: transparent; background: transparent; color: var(--muted); padding: 8px 6px; }
-  .btn-quiet:hover { background: transparent; color: var(--text); text-decoration: underline; }
-
-  .note { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
-  #msg { font-size: 13px; color: var(--text); margin: 12px 0 0; min-height: 1.4em; }
-  #msg:empty { display: none; }
-
-  /* Results grid */
-  .results { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
-  @media (max-width: 1100px) { .results { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 720px) { .results { grid-template-columns: 1fr; } }
-  .panel {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column;
-  }
-  .panel-head {
-    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-    padding: 12px 14px; border-bottom: 1px solid var(--border);
-  }
-  .panel-head h2 { font-size: 13px; font-weight: 650; margin: 0; }
-  .panel-head h2 .num { color: var(--faint); font-weight: 600; margin-right: 6px; }
-  .panel-head .meta { font-size: 12px; color: var(--muted); text-align: right; }
-  .panel-body { background: #0a0a0a; min-height: 220px; display: flex; align-items: center; justify-content: center; }
-  .panel-body.light { background: #eef0f2; }
-  .panel-body img { width: 100%; display: block; cursor: zoom-in; }
-  .empty { color: var(--faint); font-size: 13px; padding: 24px; text-align: center; }
-  .panel-foot {
-    display: flex; justify-content: space-between; align-items: center; gap: 8px;
-    padding: 10px 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted);
-  }
-  .panel-foot a { color: var(--accent); text-decoration: none; }
-  .panel-foot a:hover { text-decoration: underline; }
-
-  /* Calibration */
-  #calib { display: none; margin-top: 16px; }
-  .segmented { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--radius); overflow: hidden; }
-  .segmented label { padding: 8px 14px; font-size: 13px; color: var(--muted); cursor: pointer; border-right: 1px solid var(--border); }
-  .segmented label:last-child { border-right: 0; }
-  .segmented label:has(input:checked) { background: var(--accent); color: #fff; }
-  .segmented input { display: none; }
-  canvas { max-width: 100%; border: 1px solid var(--border-strong); border-radius: var(--radius); cursor: crosshair; display: block; margin-top: 12px; }
-  .click-count { font-size: 13px; color: var(--muted); margin: 8px 0 0; font-variant-numeric: tabular-nums; }
-
-  /* Lightbox */
-  #lightbox { display: none; position: fixed; inset: 0; background: rgba(16, 18, 20, 0.94); z-index: 100; padding: 48px 24px 24px; box-sizing: border-box; overflow: auto; }
+  body { font-family: system-ui, sans-serif; margin: 0; background: #111; color: #eee; }
+  header { padding: 12px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0 8px 0 0; }
+  .badge { padding: 4px 10px; border-radius: 999px; font-size: 13px; background: #333; }
+  .badge.ok { background: #14532d; }
+  button, select, input { padding: 8px 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: #eee; cursor: pointer; }
+  button.primary { background: #2563eb; border-color: #2563eb; }
+  button.active { background: #0e7490; border-color: #0e7490; }
+  h2.section { font-size: 16px; margin: 16px 16px 8px; }
+  main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 0 16px 16px; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  .window { background: #000; border: 1px solid #333; border-radius: 12px; overflow: hidden; position: relative; }
+  .window h2 { font-size: 14px; margin: 0; padding: 10px 12px; background: #1a1a1a; display: flex; justify-content: space-between; align-items: center; }
+  .window h2 span { color: #9ca3af; font-weight: normal; }
+  .expand { background: none; border: 1px solid #555; padding: 2px 8px; font-size: 14px; }
+  .window img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: contain; background: #000; cursor: zoom-in; }
+  #photoTwinImg { aspect-ratio: auto; }
+  #photoBlueprintImg { aspect-ratio: auto; }
+  #calib { display: none; margin: 0 16px 16px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 12px; }
+  canvas { max-width: 100%; cursor: crosshair; border: 1px solid #555; }
+  #msg { padding: 0 16px 12px; color: #a7f3d0; min-height: 1.2em; }
+  label { font-size: 13px; color: #9ca3af; }
+  .hint { font-size: 13px; color: #9ca3af; padding: 0 16px 12px; }
+  .controls { padding: 0 16px 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  /* lightbox: click any window to see it big, X / Esc / outside to close */
+  #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 100; padding: 24px; box-sizing: border-box; overflow: auto; }
   #lightbox.open { display: block; }
-  #lbTitle { color: #e8eaec; text-align: center; font-size: 13px; margin-bottom: 12px; }
-  #lbInner { max-width: 1400px; margin: 0 auto; background: #000; border: 1px solid #3a3f44; border-radius: var(--radius); overflow: hidden; }
-  #lbInner img { width: 100%; display: block; }
-  #lbClose { position: fixed; top: 12px; right: 16px; z-index: 101; background: #fff; color: #111; border: 0; }
-
-  footer { border-top: 1px solid var(--border); margin-top: 32px; padding-top: 16px; font-size: 12px; color: var(--faint); }
+  #lightbox .lb-inner { max-width: 1400px; margin: 0 auto; background: #000; border: 1px solid #444; border-radius: 12px; overflow: hidden; }
+  #lightbox .lb-inner img, #lightbox .lb-inner svg { width: 100%; display: block; }
+  #lbClose { position: fixed; top: 12px; right: 16px; z-index: 101; font-size: 20px; padding: 8px 14px; }
+  #lbTitle { color: #eee; text-align: center; padding: 8px; }
 </style>
 </head>
 <body>
-<div class="page">
+<header>
+  <h1>Photo to 2D Digital Twin — Blueprint</h1>
+  <span id="statusBadge" class="badge">checking…</span>
+  <label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> 100&nbsp;mm grid on real twin</label>
+</header>
 
-  <header>
-    <h1>Photo to 2D Digital Twin <span>/ Blueprint</span></h1>
-    <div class="status" id="statusWrap"><span class="dot"></span><span id="statusText">No photo uploaded</span></div>
-  </header>
-
-  <p class="lede">Upload one photo of a flat object with a known reference in frame. The app produces a top-down, measurable twin and a dimensioned blueprint of the same object.</p>
-
-  <div class="section-label">Workflow</div>
-  <section class="card" aria-label="Workflow">
-    <div class="steps">
-      <div class="step"><span class="step-num" id="step1">1</span><div><h3>Upload a photo</h3><p>Angled photo, reference fully in frame, even light.</p></div></div>
-      <div class="step"><span class="step-num" id="step2">2</span><div><h3>Calibrate</h3><p>Click the reference corners. A4, or a 30&nbsp;cm scale for larger objects.</p></div></div>
-      <div class="step"><span class="step-num" id="step3">3</span><div><h3>Review and download</h3><p>Check the twin against the blueprint. Download either as PNG.</p></div></div>
-    </div>
-
-    <div class="field-row">
-      <div class="field"><label for="photoFile">Photo</label><input type="file" id="photoFile" accept="image/*"></div>
-      <div class="field"><label for="photoTitle">Object name (optional)</label><input type="text" id="photoTitle" value="" placeholder="e.g. Submarine"></div>
-      <button class="primary" onclick="uploadPhoto()">Upload photo</button>
-      <button onclick="openPhotoCalib()">Calibrate</button>
-      <label style="font-size:13px;color:var(--muted)"><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> 100 mm grid on twin</label>
-    </div>
-
-    <p class="note">Photos are held in memory on this machine only. Nothing is sent to a server.</p>
-    <p id="msg" role="status"></p>
-
-    <div id="calib">
-      <div class="section-label" style="margin-top:8px">Calibration</div>
-      <div class="segmented" role="radiogroup" aria-label="Reference type">
-        <label><input type="radio" name="refMode" value="a4" checked onchange="setRefMode()"> A4 sheet — 210 × 297 mm</label>
-        <label><input type="radio" name="refMode" value="scale" onchange="setRefMode()"> 30 cm scale — for larger objects</label>
-      </div>
-      <div class="field-row" id="refFieldsA4">
-        <div class="field"><label for="pwMm">Reference width (mm)</label><input id="pwMm" type="number" value="210"></div>
-        <div class="field"><label for="phMm">Reference height (mm)</label><input id="phMm" type="number" value="297"></div>
-      </div>
-      <div class="field-row" id="refFieldsScale" style="display:none">
-        <div class="field"><label for="rulerMm">Scale length (mm)</label><input id="rulerMm" type="number" value="300"></div>
-        <p class="note" style="margin:0">Place the scale flat beside the object, in the same plane, fully in frame.</p>
-      </div>
-      <p class="note" id="calibHelp">Click the four corners of the A4 sheet, in order: top-left, top-right, bottom-right, bottom-left.</p>
-      <canvas id="photoCanvas"></canvas>
-      <p class="click-count" id="photoClickInfo">0 of 4 points selected</p>
-      <div class="field-row">
-        <button class="primary" onclick="applyPhotoCalib()">Apply calibration</button>
-        <button onclick="autoPhotoAruco()">Auto-detect ArUco markers</button>
-        <button class="btn-quiet" onclick="clearPhotoClicks()">Clear points</button>
-        <button class="btn-quiet" onclick="closePhotoCalib()">Close</button>
-      </div>
-    </div>
-  </section>
-
-  <div class="section-label">Results</div>
-  <main class="results">
-    <section class="panel" aria-label="Source photo">
-      <div class="panel-head"><h2><span class="num">01</span>Source photo</h2><span class="meta">As taken</span></div>
-      <div class="panel-body light" id="photoBody"><span class="empty">No photo yet</span></div>
-      <div class="panel-foot"><span id="photoMeta">—</span><button class="btn-quiet" onclick="openLightbox('photo')">Expand</button></div>
-    </section>
-
-    <section class="panel" aria-label="Top-down twin">
-      <div class="panel-head"><h2><span class="num">02</span>Top-down twin</h2><span class="meta">5 px / mm</span></div>
-      <div class="panel-body" id="twinBody"><span class="empty">Calibrate a photo to generate the twin</span></div>
-      <div class="panel-foot"><span id="twinMeta">—</span><span><a href="/photo_twin.png">Download PNG</a> &nbsp;·&nbsp; <button class="btn-quiet" onclick="openLightbox('twin')">Expand</button></span></div>
-    </section>
-
-    <section class="panel" aria-label="Blueprint">
-      <div class="panel-head"><h2><span class="num">03</span>Blueprint</h2><span class="meta">Dimensioned, mm</span></div>
-      <div class="panel-body" id="blueprintBody" style="background:#0a2e6e"><span class="empty" style="color:#9db4d8">Calibrate a photo to generate the blueprint</span></div>
-      <div class="panel-foot"><span id="blueprintMeta">—</span><span><a href="/photo_blueprint.png">Download PNG</a> &nbsp;·&nbsp; <button class="btn-quiet" onclick="openLightbox('blueprint')">Expand</button></span></div>
-    </section>
-  </main>
-
-  <footer>
-    Photo to 2D Digital Twin — local Flask app. Twin scale: pixels ÷ px/mm = millimetres.
-    Reference: A4 (210 × 297 mm) or a 30 cm scale. Live webcam mode is currently disabled; run with <code>--live</code> to re-enable it.
-  </footer>
+<div class="hint">
+  One photo + a known reference = a top-down, measurable twin and a dimensioned blueprint.
+  Small object: use an A4 sheet (210 × 297 mm). Big object that won't fit on A4: put a 30 cm scale beside it instead.
+  Click any window to open it big — X, Esc, or click outside to close it.
 </div>
 
-<div id="lightbox" onclick="if(event.target===this) closeLightbox()" role="dialog" aria-modal="true">
-  <button id="lbClose" onclick="closeLightbox()">Close ×</button>
+<h2 class="section">Photo mode — upload a photo, get the real twin and the blueprint</h2>
+<div class="controls">
+  <input type="file" id="photoFile" accept="image/*">
+  <button class="primary" onclick="uploadPhoto()">Upload photo</button>
+  <button onclick="openPhotoCalib()">Calibrate (click corners)</button>
+  <label>Object name <input id="photoTitle" type="text" value="" placeholder="e.g. SUBMARINE" style="width:150px"></label>
+  <a href="/photo_twin.png"><button>Download real twin PNG</button></a>
+  <a href="/photo_blueprint.png"><button>Download blueprint PNG</button></a>
+  <a href="/photo_blueprint.svg" download="blueprint.svg"><button>Download blueprint SVG</button></a>
+</div>
+
+<main>
+  <section class="window" data-title="Your photo">
+    <h2>① Your photo <span>— angled, as taken</span> <button class="expand" onclick="openLightbox('photo')">Expand</button></h2>
+    <img id="photoImg" src="" alt="Upload a photo to see it here" onclick="openLightbox('photo')">
+  </section>
+  <section class="window" data-title="Real twin">
+    <h2>② Real twin <span>— top-down photo, 5 px/mm</span> <button class="expand" onclick="openLightbox('twin')">Expand</button></h2>
+    <img id="photoTwinImg" src="" alt="The twin appears here after calibration" onclick="openLightbox('twin')">
+  </section>
+  <section class="window" data-title="Blueprint">
+    <h2>③ Blueprint <span>— dimensioned, mm</span> <button class="expand" onclick="openLightbox('blueprint')">Expand</button></h2>
+    <img id="photoBlueprintImg" src="" alt="The blueprint appears here after calibration" onclick="openLightbox('blueprint')">
+  </section>
+</main>
+
+
+<section id="calib">
+  <h3 style="margin-top:0">Calibrate — click in order</h3>
+  <p>
+    <label><input type="radio" name="refMode" value="a4" checked onchange="setRefMode()"> A4 sheet (210 × 297 mm) — click its 4 corners</label><br>
+    <label><input type="radio" name="refMode" value="scale" onchange="setRefMode()"> 30 cm scale — click the object's 4 corners, then the scale's 2 ends (0 cm and 30 cm)</label>
+  </p>
+  <p id="refFieldsA4">
+    <label>Width (mm) <input id="pwMm" type="number" value="210" style="width:90px"></label>
+    <label>Height (mm) <input id="phMm" type="number" value="297" style="width:90px"></label>
+  </p>
+  <p id="refFieldsScale" style="display:none">
+    <label>Scale length (mm) <input id="rulerMm" type="number" value="300" style="width:90px"></label>
+    <span style="color:#9ca3af">Place the scale flat beside the object, in the same plane, fully in frame.</span>
+  </p>
+  <p>
+    <button class="primary" onclick="applyPhotoCalib()">Apply — make twin + blueprint</button>
+    <button onclick="closePhotoCalib()">Cancel</button>
+    <button onclick="clearPhotoClicks()">Clear clicks</button>
+  </p>
+  <canvas id="photoCanvas"></canvas>
+  <p id="photoClickInfo">Clicks: 0 / 4</p>
+</section>
+
+<div id="msg"></div>
+
+<div id="lightbox" onclick="if(event.target===this) closeLightbox()">
+  <button id="lbClose" onclick="closeLightbox()">✕ Close</button>
   <div id="lbTitle"></div>
-  <div id="lbInner"></div>
+  <div class="lb-inner" id="lbInner"></div>
 </div>
 
 <script>
@@ -225,42 +115,35 @@ let photoClicks = [];
 let refMode = 'a4';
 function showMsg(t) { document.getElementById('msg').textContent = t; }
 
-function setStep(n, done) {
-  const el = document.getElementById('step' + n);
-  if (el) el.classList.toggle('done', !!done);
-}
-
 async function refreshStatus() {
   const s = await (await fetch('/status')).json();
-  const wrap = document.getElementById('statusWrap');
-  const text = document.getElementById('statusText');
-  if (!s.photo_uploaded) { text.textContent = 'No photo uploaded'; wrap.classList.remove('ready'); setStep(1, false); setStep(2, false); setStep(3, false); return; }
-  setStep(1, true);
-  if (s.photo_calibrated) {
-    text.textContent = `${s.photo_title || 'Object'} — ${s.photo_twin_px[0]} × ${s.photo_twin_px[1]} px, ${s.calibration_mode === 'scale' ? '30 cm scale' : 'A4'}`;
-    wrap.classList.add('ready'); setStep(2, true); setStep(3, true);
-  } else {
-    text.textContent = 'Photo uploaded — not calibrated';
-    wrap.classList.remove('ready'); setStep(2, false); setStep(3, false);
-  }
+  const b = document.getElementById('statusBadge');
+  if (!s.photo_uploaded) { b.textContent = 'No photo yet — upload one to start'; b.className = 'badge'; return; }
+  b.textContent = s.photo_calibrated
+    ? `Photo twin ${s.photo_twin_px[0]}×${s.photo_twin_px[1]} px ✓ · ${s.calibration_mode === 'scale' ? '30 cm scale' : 'A4'} · ${s.photo_title || 'OBJECT'}`
+    : 'Photo uploaded, not calibrated';
+  b.className = 'badge ' + (s.photo_calibrated ? 'ok' : '');
 }
 refreshStatus(); setInterval(refreshStatus, 3000);
 
-// ---------- lightbox ----------
+// ---------- lightbox: click any window to see it big ----------
 function openLightbox(kind) {
   const lb = document.getElementById('lightbox'), inner = document.getElementById('lbInner');
   const title = document.getElementById('lbTitle');
   inner.innerHTML = '';
-  const img = (id) => document.getElementById(id);
   if (kind === 'photo') {
-    if (!img('photoImg')) { showMsg('Upload a photo first.'); return; }
-    title.textContent = 'Source photo'; inner.innerHTML = `<img src="${img('photoImg').src}" alt="Source photo">`;
+    const src = document.getElementById('photoImg').src;
+    if (!src) { showMsg('Upload a photo first.'); return; }
+    title.textContent = 'Your photo'; inner.innerHTML = `<img src="${src}">`;
   } else if (kind === 'twin') {
-    if (!img('photoTwinImg')) { showMsg('Calibrate a photo first.'); return; }
-    title.textContent = 'Top-down twin'; inner.innerHTML = `<img src="${img('photoTwinImg').src}" alt="Top-down twin">`;
+    const src = document.getElementById('photoTwinImg').src;
+    if (!src) { showMsg('Calibrate a photo first.'); return; }
+    title.textContent = 'Real twin — top-down'; inner.innerHTML = `<img src="${src}">`;
   } else {
-    if (!img('photoBlueprintImg')) { showMsg('Calibrate a photo first.'); return; }
-    title.textContent = 'Blueprint'; inner.innerHTML = `<img src="${img('photoBlueprintImg').src}" alt="Blueprint">`;
+    const src = document.getElementById('photoBlueprintImg').src;
+    if (!src) { showMsg('Calibrate a photo first.'); return; }
+    title.textContent = 'Blueprint';
+    inner.innerHTML = `<img src="${src}">`;
   }
   lb.classList.add('open');
 }
@@ -274,43 +157,35 @@ async function uploadPhoto() {
   const fd = new FormData(); fd.append('photo', f);
   const r = await fetch('/upload_photo', { method: 'POST', body: fd });
   const j = await r.json();
-  showMsg(j.message || j.error || 'Done.');
+  showMsg(j.message || j.error || 'Done');
   if (j.ok) {
-    document.getElementById('photoBody').innerHTML = `<img id="photoImg" src="/uploaded.jpg?t=${Date.now()}" alt="Source photo" onclick="openLightbox('photo')">`;
-    document.getElementById('photoMeta').textContent = `${j.filename} — ${j.width_px} × ${j.height_px} px`;
-    document.getElementById('twinBody').innerHTML = '<span class="empty">Calibrate a photo to generate the twin</span>';
-    document.getElementById('blueprintBody').innerHTML = '<span class="empty" style="color:#9db4d8">Calibrate a photo to generate the blueprint</span>';
-    document.getElementById('twinMeta').textContent = '—';
-    document.getElementById('blueprintMeta').textContent = '—';
+    document.getElementById('photoImg').src = '/uploaded.jpg?t=' + Date.now();
+    document.getElementById('photoTwinImg').src = '';
+    document.getElementById('photoBlueprintImg').src = '';
     refreshStatus();
   }
 }
 
 function setRefMode() {
   refMode = document.querySelector('input[name="refMode"]:checked').value;
-  document.getElementById('refFieldsA4').style.display = refMode === 'a4' ? 'flex' : 'none';
-  document.getElementById('refFieldsScale').style.display = refMode === 'scale' ? 'flex' : 'none';
-  document.getElementById('calibHelp').textContent = refMode === 'a4'
-    ? 'Click the four corners of the A4 sheet, in order: top-left, top-right, bottom-right, bottom-left.'
-    : 'Click the four corners of the object first (points 1–4), then the two ends of the scale: the 0 cm mark, then the 30 cm mark (points 5–6).';
+  document.getElementById('refFieldsA4').style.display = refMode === 'a4' ? 'block' : 'none';
+  document.getElementById('refFieldsScale').style.display = refMode === 'scale' ? 'block' : 'none';
   photoClicks = [];
-  updateClickCount();
-}
-
-function updateClickCount() {
-  const need = refMode === 'a4' ? 4 : 6;
-  document.getElementById('photoClickInfo').textContent = `${photoClicks.length} of ${need} points selected`;
+  document.getElementById('photoClickInfo').textContent = refMode === 'a4' ? 'Clicks: 0 / 4 — A4 corners' : 'Clicks: 0 / 6 — 4 object corners, then 2 scale ends';
 }
 
 function drawClicks(canvas, pts) {
   const ctx = canvas.getContext('2d');
   pts.forEach(([x, y], i) => {
     const isRuler = refMode === 'scale' && i >= 4;
-    ctx.fillStyle = isRuler ? '#00b3c8' : '#c0392b';
-    ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.fillText(String(i + 1), x + 10, y + 4);
+    ctx.fillStyle = isRuler ? 'cyan' : 'red';
+    ctx.beginPath(); ctx.arc(x, y, 8, 0, 7); ctx.fill();
+    ctx.fillStyle = 'white'; ctx.font = '20px sans-serif'; ctx.fillText(String(i + 1), x + 12, y);
   });
-  updateClickCount();
+  const need = refMode === 'a4' ? 4 : 6;
+  document.getElementById('photoClickInfo').textContent =
+    `Clicks: ${pts.length} / ${need} — ${JSON.stringify(pts)}` +
+    (refMode === 'scale' && pts.length < 4 ? ' (object corners first)' : refMode === 'scale' && pts.length < 6 ? ' (now the 2 scale ends)' : '');
 }
 
 async function openPhotoCalib() {
@@ -326,7 +201,7 @@ async function openPhotoCalib() {
     setRefMode();
   };
   img.src = '/uploaded.jpg?t=' + Date.now();
-  document.getElementById('calib').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('calib').scrollIntoView();
 }
 function closePhotoCalib() { document.getElementById('calib').style.display = 'none'; }
 function clearPhotoClicks() { photoClicks = []; openPhotoCalib(); }
@@ -345,26 +220,23 @@ async function applyPhotoCalib() {
   const title = document.getElementById('photoTitle').value;
   let url, body;
   if (refMode === 'a4') {
-    if (photoClicks.length !== 4) { showMsg('Select exactly four A4 corners first.'); return; }
+    if (photoClicks.length !== 4) { showMsg('Click exactly 4 A4 corners first.'); return; }
     url = '/photo_calibrate';
     body = { points: photoClicks, width_mm: +document.getElementById('pwMm').value,
       height_mm: +document.getElementById('phMm').value, px_per_mm: 5, title };
   } else {
-    if (photoClicks.length !== 6) { showMsg('Select four object corners, then the two scale ends (six points in total).'); return; }
+    if (photoClicks.length !== 6) { showMsg('Click 4 object corners, then the 2 scale ends (6 clicks total).'); return; }
     url = '/photo_calibrate_scale';
     body = { corners: photoClicks.slice(0, 4), ruler: photoClicks.slice(4, 6),
       ruler_mm: +document.getElementById('rulerMm').value, title };
   }
   const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
   const j = await r.json();
-  showMsg(j.message || j.error || 'Done.');
+  showMsg(j.message || j.error || 'Done');
   if (j.ok) {
     const t = Date.now();
-    document.getElementById('twinBody').innerHTML = `<img id="photoTwinImg" src="/photo_twin.jpg?t=${t}" alt="Top-down twin" onclick="openLightbox('twin')">`;
-    document.getElementById('blueprintBody').innerHTML = `<img id="photoBlueprintImg" src="/photo_blueprint.jpg?t=${t}" alt="Blueprint" onclick="openLightbox('blueprint')">`;
-    document.getElementById('twinMeta').textContent = `${j.twin_px[0]} × ${j.twin_px[1]} px`;
-    const bp = j.blueprint;
-    document.getElementById('blueprintMeta').textContent = bp ? `Object ${bp.object_w_mm} × ${bp.object_h_mm} mm` : '—';
+    document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
+    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
     closePhotoCalib(); refreshStatus();
   }
 }
@@ -375,12 +247,11 @@ async function autoPhotoAruco() {
     title: document.getElementById('photoTitle').value };
   const r = await fetch('/photo_aruco', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
   const j = await r.json();
-  showMsg(j.message || j.error || 'Done.');
+  showMsg(j.message || j.error || 'Done');
   if (j.ok) {
     const t = Date.now();
-    document.getElementById('twinBody').innerHTML = `<img id="photoTwinImg" src="/photo_twin.jpg?t=${t}" alt="Top-down twin" onclick="openLightbox('twin')">`;
-    document.getElementById('blueprintBody').innerHTML = `<img id="photoBlueprintImg" src="/photo_blueprint.jpg?t=${t}" alt="Blueprint" onclick="openLightbox('blueprint')">`;
-    document.getElementById('twinMeta').textContent = `${j.twin_px[0]} × ${j.twin_px[1]} px`;
+    document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
+    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + Date.now();
     refreshStatus();
   }
 }
@@ -388,8 +259,9 @@ async function autoPhotoAruco() {
 async function toggleGrid() {
   const v = document.getElementById('gridChk').checked;
   await fetch('/toggle_grid', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ show_grid: v }) });
+  const t = Date.now();
   const img = document.getElementById('photoTwinImg');
-  if (img) img.src = '/photo_twin.jpg?t=' + Date.now();
+  if (img.src) img.src = '/photo_twin.jpg?t=' + t;
 }
 </script>
 </body>

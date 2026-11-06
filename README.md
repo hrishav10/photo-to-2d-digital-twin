@@ -1,52 +1,76 @@
-# Photo to 2D Digital Twin
+# Photo to 2D Digital Twin — Blueprint
 
-Upload one photo of a flat object with a known reference in frame.
-The app produces a top-down, measurable twin and a dimensioned
-blueprint of the same object.
+One photo + a known reference = a true top-down, measurable 2D twin
++ a dimensioned blueprint. Photo only — no live feed
+for now (run with `--live` to re-enable the webcam mode).
 
-Photo only. No live feed, no account, no cloud — photos are held
-in memory on the local machine.
+No COLMAP, no GPU, no 3D. Just one homography warp, in the browser.
 
-## Output
+## What you get: real twin + blueprint
 
-1. **Source photo** — as taken.
-2. **Top-down twin** — the warped, top-down view at 5 px/mm.
-3. **Blueprint** — a static technical drawing: blue sheet, white
-   outlines, dimension lines labelled in millimetres, centre
-   lines, and a title block with the object name you enter.
-   There is no default object name; leave the field blank and
-   the sheet is titled `OBJECT`.
+Every photo produces **two** twins, side by side, plus the photo:
 
-Click any of the three panels to open it at full size. Close
-with the Close button, Esc, or by clicking outside the image.
+- **① Your photo** — angled, as taken.
+- **② Real twin** — the top-down photo, as it looks.
+- **③ Blueprint** — the same twin redrawn as a technical drawing:
+  deep-blue paper, white line drawing of the object and its parts,
+  dimension lines with arrows labelled in **real mm**, dashed
+  centre lines, and a title block with the name you type in —
+  there is no default object name, the box starts blank.
 
-Dimensions are measured from the object's outline in the twin,
-using the calibration scale (pixels ÷ px/mm = millimetres).
+Click any window to open it big (⛶ button, or click the photo /
+twin). Close with ✕, Esc, or clicking outside.
 
-## Calibration
+The dimensions are real: the object's width/height are measured
+from its outline in the twin, using the homography scale
+(px / px_per_mm = mm).
 
-Two references are supported. Choose one before calibrating.
 
-### A4 sheet — for small objects
+## Two references: A4, or a 30 cm scale for big objects
 
-Place an A4 sheet (210 × 297 mm) flat in frame, corners sharp,
-even light. Click its four corners in order: top-left, top-right,
-bottom-right, bottom-left.
+### A. Small object — A4 sheet (210 × 297 mm)
 
-### 30 cm scale — for larger objects
+1. Put an A4 sheet flat in frame, corners sharp, even light.
+2. Upload the photo, hit **Calibrate**, click the A4 corners in
+   order: **top-left, top-right, bottom-right, bottom-left** → Apply.
+3. Twin + blueprint appear at **5 px/mm** (A4 = 1050 × 1485 px).
 
-Place a 30 cm ruler flat beside the object, in the same plane,
-fully in frame. Click the object's four corners first, then the
-two ends of the scale: the 0 cm mark, then the 30 cm mark.
+### B. Big object — 30 cm scale beside it
 
-The scale sets the real px/mm — the ruler is warped with the
-same homography and then measured — so dimensions remain in
-real millimetres with no A4 sheet, at any size.
+Won't fit on A4? Don't force it. Put a **30 cm ruler / scale**
+flat beside the object, in the same plane, fully in frame.
 
-ArUco markers (ids 0–3) can be used instead of clicking, in
-A4 mode.
+1. Upload the photo, hit **Calibrate**, pick **30 cm scale**.
+2. Click the object's **4 corners** first (red dots 1–4).
+3. Then click the scale's **2 ends** — the 0 cm mark, then the
+   30 cm mark (cyan dots 5–6) → Apply.
+4. The scale sets the real px/mm (the ruler is warped with the
+   same homography, then measured), so the blueprint dimensions
+   are still in real mm — no A4 needed, any size works.
 
-## Run
+Or skip clicking: print 4 ArUco markers (ids 0–3), place them at
+the corners, and use the A4 mode's auto-calibration.
+
+## Curved objects — e.g. a guitar on the floor
+
+You never trace the curve. The four clicks are always the
+corners of a rectangle on the floor plane — the reference
+(A4) or an imaginary bounding box around the object — never
+the object's outline. The warp straightens the whole plane,
+so the curve comes along for free and appears correctly in
+the twin and the blueprint.
+
+For a guitar lying flat on the floor, use the 30 cm scale
+mode: click the four corners of a rectangle on the floor
+that encloses the guitar (top of the headstock, both sides
+of the body), then the two ends of the scale lying flat
+beside it. The blueprint then measures the guitar's
+bounding box — its full length and the body's width — and
+its outline is traced from the largest contour in the twin.
+Keep the guitar flat on the floor; anything sticking up
+will look stretched.
+
+## Run it
 
 ```bash
 pip install -r requirements.txt
@@ -54,40 +78,41 @@ python3 app.py
 # open http://127.0.0.1:5000
 ```
 
-Live webcam mode is currently disabled. Re-enable it with
-`python3 app.py --live`.
+Live webcam mode is paused; re-enable it with `python3 app.py --live`.
 
-## CLI
+## CLI — no web UI at all
 
 ```bash
-python3 photo_to_2d.py photo.jpg
-# click four corners; output: twin_topdown.png
-python3 photo_to_2d.py photo.jpg --corners 120,80 900,110 880,700 140,660 --svg plan.svg
-python3 photo_to_2d.py photo.jpg --corners 120,80 900,110 880,700 140,660 --blueprint blueprint.png --title SUBMARINE
+python3 photo_to_2d.py room.jpg
+# click 4 corners, output: twin_topdown.png
+python3 photo_to_2d.py room.jpg --corners 120,80 900,110 880,700 140,660 --svg plan.svg
+python3 photo_to_2d.py calculator.jpg --corners 120,80 900,110 880,700 140,660 --blueprint calculator_blueprint.png --title CALCULATOR
 ```
 
 ## How it works
 
 ```
-Photo → Calibrate once → Warp → Twin + Blueprint
-        A4 corners, or    cv2.warpPerspective
-        object corners +  blueprint.py redraws
-        30 cm scale ends  the twin as a sheet
+Photo ──► Calibrate once ──► Warp ──► Real twin + Blueprint
+         A4 corners, or       cv2.warpPerspective
+         object corners +     blueprint.py redraws
+         30 cm scale ends     it as an SVG/PNG
 ```
 
-The homography is a single 3 × 3 matrix. Computing it is the
-fiddly part; applying it is cheap. In scale mode, the warp size
-comes from the object corners in the photo and the px/mm comes
-from the warped 30 cm ruler.
+- **Calibrate once, warp forever.** The homography is a single 3×3
+  matrix. Computing it is the fiddly part; applying it is cheap.
+- **Measurable.** Twin size = reference size × px/mm, with a
+  100 mm grid drawn on the real twin, so it reads as a plan.
+- **Scale mode:** the warp size comes from the object corners in
+  the photo; the px/mm comes from the warped 30 cm ruler.
 
 ## Files
 
-| File | Purpose |
+| File | What it does |
 | --- | --- |
-| `app.py` | Flask app: photo upload, A4 and 30 cm scale calibration, twin and blueprint routes |
-| `blueprint.py` | Twin to blueprint sheet (PNG) and blueprint (SVG): blue sheet, white outlines, dimension lines in mm, centre lines, title block |
-| `templates/index.html` | Web interface: upload, calibration, three result panels, full-size view |
-| `photo_to_2d.py` | Command-line version: one photo to a top-down PNG, optional SVG plan and blueprint sheet |
+| `app.py` | Flask app: photo upload, A4 + 30 cm scale calibration, blueprint SVG/PNG/JSON routes (live mode paused, `--live` to re-enable) |
+| `blueprint.py` | Twin → blueprint sheet: blue paper, white outlines, dimension lines in mm, centre lines, title block (PNG, plus an SVG export) |
+| `templates/index.html` | Three-window UI: photo, real twin, blueprint — click-to-expand lightbox |
+| `photo_to_2d.py` | CLI version: one photo → top-down PNG (+ optional SVG plan in mm, `--blueprint` sheet) |
 | `requirements.txt` | Flask, opencv-python, numpy |
 
 ## License
