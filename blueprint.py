@@ -147,32 +147,11 @@ def _dim_v(img, y0, y1, x, label, color=CYAN):
     img[max(0, y):y + th2, x - tw2 // 2:x - tw2 // 2 + tw2] = txt
 
 
-def _find_object_polygon(twin):
-    """Largest contour, approximated to a polygon, in twin px coords.
-    Returns a list of (x, y) or None."""
-    gray = cv2.cvtColor(twin, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    _, bw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    contours, _ = cv2.findContours(255 - bw, cv2.RETR_EXTERNAL,
-                                   cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
-        return None
-    h, w = gray.shape
-    sheet_area = h * w
-    candidates = [c for c in contours
-                  if 0.02 * sheet_area < cv2.contourArea(c) < 0.98 * sheet_area]
-    if not candidates:
-        return None
-    cnt = max(candidates, key=cv2.contourArea)
-    approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
-    return [(int(p[0][0]), int(p[0][1])) for p in approx.reshape(-1, 1, 2)]
-
-
 def make_blueprint_svg(twin, width_mm, height_mm, px_per_mm,
                        title="OBJECT"):
     """Same blueprint as make_blueprint(), but as interactive SVG.
 
-    Every part is a <polygon>/<rect class="part"> with data-*
+    Every part is a <rect class="part"> with data-*
     attributes in real mm, so the browser can click / hover it,
     show its size, and measure between points. Groups are
     #bp-grid, #bp-drawing, #bp-dims, #bp-centre, #bp-title so the
@@ -190,10 +169,6 @@ def make_blueprint_svg(twin, width_mm, height_mm, px_per_mm,
     x, y, w, h = obj
     obj_w_mm = w / px_per_mm
     obj_h_mm = h / px_per_mm
-    poly = _find_object_polygon(twin)
-    if not poly:
-        poly = [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
-    poly_pts = " ".join(f"{ox + px},{oy + py}" for px, py in poly)
     cx, cy = ox + x + w // 2, oy + y + h // 2
     today = datetime.date.today().isoformat()
     esc_title = html.escape(str(title).upper())
@@ -202,18 +177,25 @@ def make_blueprint_svg(twin, width_mm, height_mm, px_per_mm,
         return v / px_per_mm
 
     parts = []
+    # Outline = the measured bounding rectangle, NOT the traced
+    # photo contour. The contour trace (approxPolyDP) turns a
+    # real photo's rounded corners, glare and shadow into big
+    # diagonal cuts, so the outline came out skewed and did not
+    # look like the object. The rect is the measured size
+    # (81 x 168 mm for this calculator) and is always straight.
     parts.append(
-        f'<polygon class="part main" data-name="{esc_title}" '
+        f'<rect class="part main" data-name="{esc_title}" '
         f'data-w-mm="{obj_w_mm:.1f}" data-h-mm="{obj_h_mm:.1f}" '
         f'data-x-mm="{mm(x):.1f}" data-y-mm="{mm(y):.1f}" '
-        f'points="{poly_pts}" fill="none" stroke="#fff" stroke-width="3"/>')
+        f'x="{ox + x}" y="{oy + y}" width="{w}" height="{h}" '
+        f'fill="none" stroke="#fff" stroke-width="3"/>')
     for i, (ix, iy, iw, ih) in enumerate(_inner_rects(twin)):
         parts.append(
             f'<rect class="part inner" data-name="Part {i + 1}" '
             f'data-w-mm="{mm(iw):.1f}" data-h-mm="{mm(ih):.1f}" '
             f'data-x-mm="{mm(ix):.1f}" data-y-mm="{mm(iy):.1f}" '
             f'x="{ox + ix}" y="{oy + iy}" width="{iw}" height="{ih}" '
-            f'fill="rgba(255,255,255,0.06)" stroke="#8ec8ff" stroke-width="1"/>')
+            f'fill="rgba(255,255,255,0.08)" stroke="#fff" stroke-width="2"/>')
 
     grid = []
     step = max(1, int(round(10 * px_per_mm)))
@@ -290,26 +272,21 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
         cv2.line(sheet, (0, y), (sheet.shape[1], y), BLUE_GRID, 1)
 
     # --- object outline + inner parts ---
-    # No Canny edge layer: every photo edge used to become a white
-    # pixel, which read as noise. The drawing is now only clean
-    # geometry, drawn anti-aliased. The outline follows the
-    # object's traced polygon (so a curved guitar stays curved),
-    # not just its bounding box.
+    # Outline = the measured bounding rectangle. The traced
+    # contour polygon is NOT used here: on a real photo,
+    # approxPolyDP turns rounded corners, glare and shadow
+    # into big diagonal cuts, so the outline came out skewed
+    # and did not look like the object. The rect is the
+    # measured size and is always straight.
     obj = _find_object_rect(twin)
     if obj is None:
         obj = (0, 0, tw, th)  # fallback: the whole twin is the object
     x, y, w, h = obj
-    poly = _find_object_polygon(twin)
-    if poly:
-        pts = np.array([(ox + px, oy + py) for px, py in poly],
-                       dtype=np.int32)
-        cv2.polylines(sheet, [pts], True, WHITE, 3, cv2.LINE_AA)
-    else:
-        cv2.rectangle(sheet, (ox + x, oy + y), (ox + x + w, oy + y + h),
-                      WHITE, 3, cv2.LINE_AA)
+    cv2.rectangle(sheet, (ox + x, oy + y), (ox + x + w, oy + y + h),
+                  WHITE, 3, cv2.LINE_AA)
     for (ix, iy, iw, ih) in _inner_rects(twin):
         cv2.rectangle(sheet, (ox + ix, oy + iy), (ox + ix + iw, oy + iy + ih),
-                      LIGHT_BLUE, 2, cv2.LINE_AA)
+                      WHITE, 2, cv2.LINE_AA)
 
     obj_w_mm = w / px_per_mm
     obj_h_mm = h / px_per_mm

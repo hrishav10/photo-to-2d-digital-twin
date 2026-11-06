@@ -67,6 +67,17 @@ deliberately precise:
 The layout is full-width with no side margins, and the
 interface uses only restrained fade and rise animations.
 
+## The outline is the measured rectangle
+
+The blueprint outline is the object's measured bounding
+rectangle (the same 81 x 168 mm as the dimension lines),
+not a traced photo contour. Tracing the contour with
+approxPolyDP turned a real photo's rounded corners, glare
+and shadow into big diagonal cuts, so the outline came out
+skewed and did not look like the object. The rectangle
+cannot skew that way. Inner parts (screen, keys) are still
+detected from the photo and drawn inside it, in white.
+
 ## Sharp blueprint lines — SVG, not JPG
 
 The blueprint shown in the app is an **SVG (vector)**,
