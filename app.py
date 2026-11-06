@@ -591,6 +591,43 @@ def photo_calibrate_scale():
                                f"{ruler_mm:.0f} mm scale)."})
 
 
+@app.route("/photo_preview", methods=["POST"])
+def photo_preview():
+    """Warp preview from the points as clicked, without saving
+    anything. Lets the user check the selection is good before
+    hitting Apply. Body is the same as /photo_calibrate or
+    /photo_calibrate_scale, plus "mode": "a4" or "scale"."""
+    if photo_state["image"] is None:
+        return jsonify({"error": "upload a photo first"}), 400
+    d = request.get_json(force=True)
+    mode = d.get("mode", "a4")
+    try:
+        if mode == "scale":
+            corners = d.get("corners")
+            ruler = d.get("ruler")
+            if not corners or len(corners) != 4 or not ruler or len(ruler) != 2:
+                return jsonify({"error": "need 4 corners + 2 ruler ends"}), 400
+            h, out_w, out_h, _ppm, _wm, _hm = calibrate_with_scale(
+                corners, ruler, float(d.get("ruler_mm", 300)))
+        else:
+            points = d.get("points")
+            if not points or len(points) != 4:
+                return jsonify({"error": "need exactly 4 points"}), 400
+            h, out_w, out_h = compute_homography(
+                points, float(d.get("width_mm", DEFAULT_WIDTH_MM)),
+                float(d.get("height_mm", DEFAULT_HEIGHT_MM)),
+                float(d.get("px_per_mm", PHOTO_PX_PER_MM)))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    # Cap preview size so it stays fast.
+    preview = cv2.warpPerspective(photo_state["image"], h, (out_w, out_h))
+    if max(out_w, out_h) > 1200:
+        scale = 1200 / max(out_w, out_h)
+        preview = cv2.resize(preview, (int(out_w * scale), int(out_h * scale)),
+                             interpolation=cv2.INTER_AREA)
+    return Response(encode_jpeg(preview, quality=80), mimetype="image/jpeg")
+
+
 @app.route("/photo_blueprint.svg")
 def photo_blueprint_svg():
     svg, _info = warp_photo_to_blueprint_svg()

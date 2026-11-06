@@ -51,6 +51,25 @@ flat beside the object, in the same plane, fully in frame.
 Or skip clicking: print 4 ArUco markers (ids 0–3), place them at
 the corners, and use the A4 mode's auto-calibration.
 
+## Selecting the area
+
+The calibration canvas is full-width, and selection is
+deliberately precise:
+
+- As you click, the selected area is drawn as a polygon
+  with numbered points, plus a guide line to the cursor.
+- A magnifier in the top-right corner shows the area under
+  the cursor at 3×, with a crosshair, for placing corners
+  exactly.
+- Drag any point to move it. Backspace (or Undo) removes
+  the last point.
+- **Preview** warps the photo from the points as clicked,
+  without saving anything. Check it, adjust the points,
+  preview again, then Apply.
+
+The layout is full-width with no side margins, and the
+interface uses only restrained fade and rise animations.
+
 ## Curved objects — e.g. a guitar on the floor
 
 You never trace the curve. The four clicks are always the
