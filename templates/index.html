@@ -15,14 +15,13 @@
   @keyframes swap { from { opacity: 0; transform: scale(.995); } to { opacity: 1; transform: scale(1); } }
 
   /* top bar */
-  header.top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 18px 28px 6px; animation: fade .35s ease both; }
-  header.top .spacer { flex: 1; }
-  header.top .btn { padding: 9px 18px; }
+  header.top { display: flex; align-items: center; padding: 18px 28px 6px; animation: fade .35s ease both; }
   header.top h1 { font-size: 19px; margin: 0; font-weight: 650; letter-spacing: -.015em; }
 
   /* stepper */
   .steps { display: flex; align-items: center; justify-content: center; gap: 0; padding: 14px 16px 20px; animation: fade .35s .05s ease both; }
-  .step { display: inline-flex; align-items: center; gap: 9px; background: #14141f; border: 1px solid #262633; border-radius: 999px; padding: 9px 20px; font-size: 14px; font-weight: 550; color: #9a9aad; cursor: default; transition: background .25s ease, border-color .25s ease, color .25s ease; }
+  .step { display: inline-flex; align-items: center; gap: 9px; background: #14141f; border: 1px solid #262633; border-radius: 999px; padding: 9px 20px; font-size: 14px; font-weight: 550; color: #9a9aad; cursor: pointer; transition: background .25s ease, border-color .25s ease, color .25s ease, transform .12s ease; }
+  .step:active { transform: scale(.98); }
   .step .n { width: 24px; height: 24px; border-radius: 50%; background: #262633; color: #9a9aad; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 650; transition: background .2s ease, color .2s ease; flex: none; }
   .step.active { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; animation: pulse 2.4s ease-in-out infinite; }
   .step.active .n { background: rgba(255,255,255,.22); color: #fff; }
@@ -118,18 +117,14 @@
 <body>
 <header class="top">
   <h1>Photo to 2D Digital Twin</h1>
-  <span class="spacer"></span>
-  <button class="btn primary" onclick="document.getElementById('photoFile').click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>Upload photo</button>
-  <button class="btn" onclick="openPhotoCalib()">Calibrate</button>
-  <button class="btn primary" id="generateBtn" onclick="generateAction()">Generate</button>
 </header>
 
 <div class="steps">
-  <span class="step active" id="step1"><span class="n">1</span>Upload</span>
+  <button class="step active" id="step1" onclick="stepAction(1)"><span class="n">1</span>Upload</button>
   <span class="step-line" id="line1"></span>
-  <span class="step" id="step2"><span class="n">2</span>Calibrate</span>
+  <button class="step" id="step2" onclick="stepAction(2)"><span class="n">2</span>Calibrate</button>
   <span class="step-line" id="line2"></span>
-  <span class="step" id="step3"><span class="n">3</span>Generate</span>
+  <button class="step" id="step3" onclick="stepAction(3)"><span class="n">3</span>Generate</button>
 </div>
 
 <input type="file" id="photoFile" accept="image/*" style="display:none" onchange="uploadPhoto()">
@@ -196,7 +191,7 @@
   <div class="point-list" id="pointList"></div>
   <p style="color:#8b8b99">Drag a point to move it. Backspace removes the last point. Preview checks the selection before you apply it.</p>
   <div class="btn-row">
-    <button class="primary" onclick="applyPhotoCalib()">Generate</button>
+    <button class="primary" id="generateBtn" onclick="applyPhotoCalib()">Generate</button>
     <button onclick="previewPhotoCalib()">Preview</button>
     <button onclick="undoPhotoClick()">Undo last point</button>
     <button onclick="clearPhotoClicks()">Clear</button>
@@ -242,10 +237,14 @@ function setSteps(state) {
   });
   lines.forEach((el, i) => el.classList.toggle('done', i + 2 <= state));
 }
-function generateAction() {
-  const need = refMode === 'a4' ? 4 : 6;
-  if (photoClicks.length === need) applyPhotoCalib();
-  else openPhotoCalib();
+function stepAction(n) {
+  if (n === 1) { document.getElementById('photoFile').click(); }
+  else if (n === 2) { openPhotoCalib(); }
+  else {
+    const need = refMode === 'a4' ? 4 : 6;
+    if (photoClicks.length === need) applyPhotoCalib();
+    else openPhotoCalib();
+  }
 }
 function swapIn(el) {
   el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap');
@@ -317,6 +316,8 @@ async function uploadPhoto() {
     document.getElementById('blueprintMeta').textContent = '';
     document.getElementById('fileName').textContent = j.filename;
     refreshStatus();
+    // next step pops up on its own: open Calibrate once the photo lands
+    setTimeout(openPhotoCalib, 400);
   }
 }
 
@@ -452,7 +453,7 @@ async function applyPhotoCalib() {
     const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
     const j = await r.json();
     showMsg(j.message || j.error || 'Done.');
-    if (j.ok) { showResults(j); closePhotoCalib(); refreshStatus(); }
+    if (j.ok) { showResults(j); closePhotoCalib(); refreshStatus(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   } finally {
     btn.disabled = false; btn.textContent = 'Generate';
   }
