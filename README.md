@@ -25,6 +25,25 @@ model and it does not understand height: anything sticking up will
 look stretched. That is the honest limit of a single-camera 2D twin,
 and it is also why it is so cheap to run.
 
+## What you get: real twin + blueprint twin
+
+Every photo / live frame now produces **two** twins, side by side:
+
+- **② Real twin** — the top-down photo, as it looks.
+- **③ Blueprint** — the same twin redrawn like a game blueprint
+  (a submarine blueprint, for example): deep-blue paper, white
+  line drawing of the object and its parts, dimension lines with
+  arrows labelled in **real mm**, dashed centre lines, and a title
+  block (`CALCULATOR — TOP VIEW`, reference size, scale, date).
+
+The dimensions are real: the object's width/height are measured
+from its outline in the twin, using the homography scale
+(px / px_per_mm = mm). Change the object name in the
+**Object name** box before calibrating to retitle the sheet.
+
+Download either one: **Download real twin PNG** or
+**Download blueprint PNG**. CLI: `--blueprint out.png --title CALCULATOR`.
+
 ## Two ways to use it
 
 ### A. Photo mode — the original idea (no camera needed)
@@ -100,9 +119,10 @@ bigger reference.
 
 | File | What it does |
 | --- | --- |
-| `app.py` | Flask app: photo upload + live camera, homography, MJPEG streams, calibrate / ArUco / snapshot routes |
-| `templates/index.html` | Two-window UI: photo mode on top, live mode below, click-to-calibrate |
-| `photo_to_2d.py` | CLI version: one photo → top-down PNG (+ optional SVG plan in mm) |
+| `app.py` | Flask app: photo upload + live camera, homography, MJPEG streams, calibrate / ArUco / snapshot / blueprint routes |
+| `blueprint.py` | Twin → blueprint sheet: blue paper, white outlines, dimension lines in mm, centre lines, title block |
+| `templates/index.html` | Three-window UI: photo, real twin, blueprint — photo mode on top, live mode below, click-to-calibrate |
+| `photo_to_2d.py` | CLI version: one photo → top-down PNG (+ optional SVG plan in mm, `--blueprint` sheet) |
 | `requirements.txt` | Flask, opencv-python, numpy |
 
 ## Next steps

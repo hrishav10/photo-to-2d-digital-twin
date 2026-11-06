@@ -31,8 +31,15 @@ No COLMAP, no GPU. Live runs at 640x480 and 2 px/mm on a
 ThinkPad X240-class machine; photo mode runs at 5 px/mm.
 
 Windows:
-  Photo: Left = uploaded photo, Right = its 2D twin (static)
-  Live:  Left = /video_feed (raw), Right = /twin_feed (warped, live)
+  Photo: Left = uploaded photo, Middle = real 2D twin (static),
+         Right = blueprint twin (blue, dimensioned, game-style)
+  Live:  Left = /video_feed (raw), Right = /twin_feed (warped, live),
+         + /twin_blueprint_feed (live blueprint)
+
+The blueprint (blueprint.py) is the same twin redrawn as a
+technical drawing: white edges on blueprint-blue, dimension
+lines in real mm, centre lines, title block. The real twin
+stays visible too, so you can check the blueprint against it.
 
 Run:
   pip install -r requirements.txt
@@ -52,6 +59,8 @@ import time
 import cv2
 import numpy as np
 from flask import Flask, Response, jsonify, render_template, request, send_file
+
+from blueprint import make_blueprint
 
 app = Flask(__name__)
 
@@ -131,6 +140,7 @@ photo_state = {
     "width_mm": DEFAULT_WIDTH_MM,
     "height_mm": DEFAULT_HEIGHT_MM,
     "px_per_mm": PHOTO_PX_PER_MM,
+    "title": "CALCULATOR",   # title used on the blueprint sheet
 }
 
 
@@ -173,6 +183,23 @@ def warp_photo_to_twin():
     if state["show_grid"]:
         twin = draw_grid(twin, photo_state["px_per_mm"])
     return twin
+
+
+def warp_photo_to_blueprint():
+    """Uploaded photo -> blueprint twin, or (None, None) if not ready.
+
+    The blueprint is drawn from the twin WITHOUT the green grid,
+    so the grid lines don't become blueprint edges."""
+    if photo_state["image"] is None or photo_state["homography"] is None:
+        return None, None
+    w = int(round(photo_state["width_mm"] * photo_state["px_per_mm"]))
+    h = int(round(photo_state["height_mm"] * photo_state["px_per_mm"]))
+    twin = cv2.warpPerspective(photo_state["image"],
+                               photo_state["homography"], (w, h))
+    sheet, info = make_blueprint(
+        twin, photo_state["width_mm"], photo_state["height_mm"],
+        photo_state["px_per_mm"], title=photo_state["title"])
+    return sheet, info
 
 
 def warp_to_twin(frame):
@@ -367,6 +394,53 @@ def photo_twin_png():
                              "attachment; filename=twin_topdown.png"})
 
 
+@app.route("/photo_blueprint.jpg")
+def photo_blueprint_jpg():
+    sheet, _info = warp_photo_to_blueprint()
+    if sheet is None:
+        return jsonify({"error": "upload a photo and calibrate it first"}), 400
+    return Response(encode_jpeg(sheet, quality=85), mimetype="image/jpeg")
+
+
+@app.route("/photo_blueprint.png")
+def photo_blueprint_png():
+    sheet, _info = warp_photo_to_blueprint()
+    if sheet is None:
+        return jsonify({"error": "upload a photo and calibrate it first"}), 400
+    ok, buf = cv2.imencode(".png", sheet)
+    if not ok:
+        return jsonify({"error": "encode failed"}), 500
+    return Response(buf.tobytes(), mimetype="image/png",
+                    headers={"Content-Disposition":
+                             "attachment; filename=twin_blueprint.png"})
+
+
+@app.route("/photo_blueprint.json")
+def photo_blueprint_json():
+    """The blueprint's measured dimensions, in mm."""
+    _sheet, info = warp_photo_to_blueprint()
+    if info is None:
+        return jsonify({"error": "upload a photo and calibrate it first"}), 400
+    return jsonify(info)
+
+
+@app.route("/twin_blueprint_feed")
+def twin_blueprint_feed():
+    """Live blueprint stream: warp each frame, then redraw it as a
+    blueprint. Slower than the raw twin (edge detection per frame),
+    so it runs at the same 2 px/mm as the live twin."""
+    def make_blueprint_frame(frame):
+        twin = warp_to_twin(frame)
+        if state["homography"] is None:
+            return twin
+        sheet, _info = make_blueprint(
+            twin, state["width_mm"], state["height_mm"],
+            state["px_per_mm"], title=photo_state["title"])
+        return sheet
+    return Response(mjpeg_stream(make_blueprint_frame),
+                    mimetype="multipart/x-mixed-replace; boundary=frame")
+
+
 @app.route("/photo_calibrate", methods=["POST"])
 def photo_calibrate():
     """Body: {"points": [[x,y]x4 TL,TR,BR,BL], "width_mm": 210,
@@ -381,14 +455,20 @@ def photo_calibrate():
     width_mm = float(d.get("width_mm", DEFAULT_WIDTH_MM))
     height_mm = float(d.get("height_mm", DEFAULT_HEIGHT_MM))
     px_per_mm = float(d.get("px_per_mm", PHOTO_PX_PER_MM))
+    if d.get("title"):
+        photo_state["title"] = str(d["title"]).strip().upper()[:30]
     h, out_w, out_h = compute_homography(points, width_mm, height_mm, px_per_mm)
     photo_state["homography"] = h
     photo_state["width_mm"] = width_mm
     photo_state["height_mm"] = height_mm
     photo_state["px_per_mm"] = px_per_mm
+    _sheet, info = warp_photo_to_blueprint()
     return jsonify({"ok": True, "twin_px": [out_w, out_h],
+                    "blueprint": info,
                     "message": f"Photo twin ready: {out_w}x{out_h} px = "
                                f"{width_mm:.0f}x{height_mm:.0f} mm. "
+                               f"Object: {info['object_w_mm']} x "
+                               f"{info['object_h_mm']} mm. "
                                "Measure: distance_px / "
                                f"{px_per_mm:g} = distance_mm"})
 
@@ -402,6 +482,8 @@ def photo_aruco():
     width_mm = float(d.get("width_mm", DEFAULT_WIDTH_MM))
     height_mm = float(d.get("height_mm", DEFAULT_HEIGHT_MM))
     px_per_mm = float(d.get("px_per_mm", PHOTO_PX_PER_MM))
+    if d.get("title"):
+        photo_state["title"] = str(d["title"]).strip().upper()[:30]
     points, found = detect_aruco_points(photo_state["image"])
     if points is None:
         return jsonify({"error": f"need ArUco ids 0-3 in the photo, found {found}"}), 400
@@ -433,6 +515,7 @@ def status():
         "photo_filename": photo_state["filename"],
         "photo_calibrated": photo_state["homography"] is not None,
         "photo_twin_px": photo_twin_px,
+        "photo_title": photo_state["title"],
     })
 
 

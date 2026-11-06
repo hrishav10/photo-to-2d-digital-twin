@@ -17,6 +17,11 @@ Modes for step 1 (in order of preference):
 Optional --svg writes a simple SVG outline (largest contour of the warped
 view) in real mm units, so the result is a measurable plan, not just a picture.
 
+Optional --blueprint writes a game-style blueprint sheet: the twin
+redrawn in white on blueprint-blue, with dimension lines labelled
+in real mm, centre lines and a title block. Use --title to name it,
+e.g. --title CALCULATOR.
+
 Needs: pip install opencv-python numpy
 Runs fine on a ThinkPad X240-class machine: this is one warp, not COLMAP.
 
@@ -24,12 +29,15 @@ Example:
   python3 photo_to_2d.py room.jpg
   python3 photo_to_2d.py room.jpg --corners 120,80 900,110 880,700 140,660
   python3 photo_to_2d.py room.jpg --aruco --px-per-mm 10
+  python3 photo_to_2d.py calculator.jpg --corners 120,80 900,110 880,700 140,660 --blueprint calculator_blueprint.png --title CALCULATOR
 """
 import argparse
 import sys
 
 import cv2
 import numpy as np
+
+from blueprint import make_blueprint
 
 
 def parse_args():
@@ -49,6 +57,10 @@ def parse_args():
                    help="detect 4 ArUco markers (ids 0-3 = TL TR BR BL) instead of clicking")
     p.add_argument("--svg", default=None, metavar="OUT.SVG",
                    help="also write an SVG outline in mm units")
+    p.add_argument("--blueprint", default=None, metavar="OUT.PNG",
+                   help="also write a game-style blueprint sheet (blue, dimensioned)")
+    p.add_argument("--title", default="OBJECT",
+                   help="title on the blueprint sheet (default: OBJECT)")
     return p.parse_args()
 
 
@@ -147,6 +159,12 @@ def main():
           f"{args.px_per_mm:g} = distance_mm")
     if args.svg:
         write_svg(warped, args.svg, args.px_per_mm)
+    if args.blueprint:
+        sheet, info = make_blueprint(warped, args.width_mm, args.height_mm,
+                                     args.px_per_mm, title=args.title)
+        cv2.imwrite(args.blueprint, sheet)
+        print(f"Blueprint -> {args.blueprint} ({sheet.shape[1]}x{sheet.shape[0]} px, "
+              f"object {info['object_w_mm']} x {info['object_h_mm']} mm)")
 
 
 if __name__ == "__main__":

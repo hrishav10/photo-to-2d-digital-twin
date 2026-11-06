@@ -14,12 +14,14 @@
   button.primary { background: #2563eb; border-color: #2563eb; }
   h2.section { font-size: 16px; margin: 16px 16px 8px; }
   main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px 16px; }
-  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  main.three { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 1100px) { main.three { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 800px) { main, main.three { grid-template-columns: 1fr; } }
   .window { background: #000; border: 1px solid #333; border-radius: 12px; overflow: hidden; }
   .window h2 { font-size: 14px; margin: 0; padding: 10px 12px; background: #1a1a1a; }
   .window h2 span { color: #9ca3af; font-weight: normal; }
   .window img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: contain; background: #000; }
-  #twinImg, #photoTwinImg { aspect-ratio: auto; }
+  #twinImg, #photoTwinImg, #photoBlueprintImg, #twinBlueprintImg { aspect-ratio: auto; }
   #calib, #photoCalib { display: none; margin: 0 16px 16px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 12px; }
   canvas { max-width: 100%; cursor: crosshair; border: 1px solid #555; }
   #msg { padding: 0 16px 12px; color: #a7f3d0; min-height: 1.2em; }
@@ -41,23 +43,29 @@
 </div>
 
 <!-- ================= PHOTO MODE ================= -->
-<h2 class="section">📷 Photo mode — upload a photo, get its twin in the other window</h2>
+<h2 class="section">📷 Photo mode — upload a photo, get the real twin + the blueprint</h2>
 <div class="controls">
   <input type="file" id="photoFile" accept="image/*">
   <button class="primary" onclick="uploadPhoto()">Upload photo</button>
   <button onclick="openPhotoCalib()">Calibrate photo (click 4 corners)</button>
   <button onclick="autoPhotoAruco()">Auto: ArUco markers</button>
-  <a href="/photo_twin.png"><button>Download photo twin PNG</button></a>
+  <label>Object name <input id="photoTitle" type="text" value="CALCULATOR" style="width:130px"></label>
+  <a href="/photo_twin.png"><button>Download real twin PNG</button></a>
+  <a href="/photo_blueprint.png"><button>Download blueprint PNG</button></a>
 </div>
 
-<main>
+<main class="three">
   <section class="window">
     <h2>① Your photo <span>— angled, as taken</span></h2>
     <img id="photoImg" src="" alt="Upload a photo to see it here">
   </section>
   <section class="window">
-    <h2>② 2D twin <span>— top-down, 5 px/mm, measurable</span></h2>
+    <h2>② Real twin <span>— top-down photo, 5 px/mm</span></h2>
     <img id="photoTwinImg" src="" alt="The twin appears here after calibration">
+  </section>
+  <section class="window">
+    <h2>③ Blueprint <span>— blue, dimensioned in mm</span></h2>
+    <img id="photoBlueprintImg" src="" alt="The blueprint appears here after calibration">
   </section>
 </main>
 
@@ -66,7 +74,7 @@
   <p>
     <label>Width (mm) <input id="pwMm" type="number" value="210" style="width:90px"></label>
     <label>Height (mm) <input id="phMm" type="number" value="297" style="width:90px"></label>
-    <button class="primary" onclick="applyPhotoCalib()">Apply — make twin</button>
+    <button class="primary" onclick="applyPhotoCalib()">Apply — make twin + blueprint</button>
     <button onclick="closePhotoCalib()">Cancel</button>
     <button onclick="clearPhotoClicks()">Clear clicks</button>
   </p>
@@ -83,7 +91,7 @@
   <a href="/snapshot_twin.png"><button>Download live twin PNG</button></a>
 </div>
 
-<main>
+<main class="three">
   <section class="window">
     <h2>① Live feed <span>— raw camera</span></h2>
     <img src="/video_feed" alt="Live camera feed">
@@ -91,6 +99,10 @@
   <section class="window">
     <h2>② 2D twin <span>— top-down, live, 2 px/mm</span></h2>
     <img id="twinImg" src="/twin_feed" alt="2D digital twin">
+  </section>
+  <section class="window">
+    <h2>③ Blueprint <span>— live, dimensioned</span></h2>
+    <img id="twinBlueprintImg" src="/twin_blueprint_feed" alt="Live blueprint">
   </section>
 </main>
 
@@ -137,6 +149,7 @@ async function uploadPhoto() {
   if (j.ok) {
     document.getElementById('photoImg').src = '/uploaded.jpg?t=' + Date.now();
     document.getElementById('photoTwinImg').src = '';
+    document.getElementById('photoBlueprintImg').src = '';
     refreshStatus();
   }
 }
@@ -181,23 +194,32 @@ async function applyPhotoCalib() {
   if (photoClicks.length !== 4) { showMsg('Click exactly 4 corners first.'); return; }
   const body = { points: photoClicks,
     width_mm: +document.getElementById('pwMm').value,
-    height_mm: +document.getElementById('phMm').value, px_per_mm: 5 };
+    height_mm: +document.getElementById('phMm').value, px_per_mm: 5,
+    title: document.getElementById('photoTitle').value };
   const r = await fetch('/photo_calibrate', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
   const j = await r.json();
   showMsg(j.message || j.error || 'Done');
   if (j.ok) {
-    document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + Date.now();
+    const t = Date.now();
+    document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
+    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
     closePhotoCalib(); refreshStatus();
   }
 }
 
 async function autoPhotoAruco() {
   const body = { width_mm: +document.getElementById('pwMm').value,
-    height_mm: +document.getElementById('phMm').value, px_per_mm: 5 };
+    height_mm: +document.getElementById('phMm').value, px_per_mm: 5,
+    title: document.getElementById('photoTitle').value };
   const r = await fetch('/photo_aruco', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
   const j = await r.json();
   showMsg(j.message || j.error || 'Done');
-  if (j.ok) { document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + Date.now(); refreshStatus(); }
+  if (j.ok) {
+    const t = Date.now();
+    document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
+    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
+    refreshStatus();
+  }
 }
 
 // ---------- live mode ----------
