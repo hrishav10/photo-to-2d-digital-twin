@@ -7,120 +7,158 @@
 <style>
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; width: 100%; }
-  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #0e0e10; color: #e8e8ea; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
-  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #0a0a12; color: #ececf1; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; flex-direction: column; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes pop { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: scale(1); } }
+  @keyframes pop { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: scale(1); } }
 
   /* top bar */
-  header { display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-bottom: 1px solid #222226; animation: fade .35s ease both; }
-  header h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: -.01em; }
-  header h1 span { color: #8e8e96; font-weight: 450; }
-  .status { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #a1a1aa; background: #17171a; border: 1px solid #26262b; border-radius: 999px; padding: 4px 11px; }
-  .status .dot { width: 7px; height: 7px; border-radius: 50%; background: #71717a; flex: none; }
-  .status.ok { color: #a7f3d0; border-color: #1d4d33; }
-  .status.ok .dot { background: #34d399; }
-  header .spacer { flex: 1; }
-  header label { font-size: 12px; color: #8e8e96; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-  input[type="checkbox"] { accent-color: #2563eb; }
+  header.top { display: flex; align-items: center; padding: 18px 28px 6px; animation: fade .35s ease both; }
+  header.top h1 { font-size: 19px; margin: 0; font-weight: 650; letter-spacing: -.015em; }
 
-  /* toolbar */
-  .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 16px; animation: fade .35s .05s ease both; }
-  .toolbar .sep { width: 1px; height: 24px; background: #26262b; margin: 0 4px; }
-  button, input[type="text"], input[type="number"] { font: inherit; font-size: 13px; color: #e8e8ea; background: #17171a; border: 1px solid #2e2e33; border-radius: 7px; padding: 7px 12px; transition: background .15s ease, border-color .15s ease, transform .12s ease; }
-  button { cursor: pointer; }
-  button:hover { background: #1f1f23; border-color: #3f3f46; }
-  button:active { transform: scale(.98); }
-  button.primary { background: #2563eb; border-color: #2563eb; color: #fff; font-weight: 550; }
-  button.primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
-  button:disabled { opacity: .45; cursor: default; transform: none; }
-  input[type="file"] { font-size: 12px; color: #a1a1aa; max-width: 220px; }
-  .toolbar label { font-size: 12px; color: #8e8e96; display: inline-flex; align-items: center; gap: 6px; }
-  .toolbar input[type="text"] { width: 140px; }
-  .toolbar input[type="text"]::placeholder { color: #63636b; }
+  /* stepper */
+  .steps { display: flex; align-items: center; justify-content: center; gap: 0; padding: 14px 16px 20px; animation: fade .35s .05s ease both; }
+  .step { display: inline-flex; align-items: center; gap: 9px; background: #14141f; border: 1px solid #262633; border-radius: 999px; padding: 9px 20px; font-size: 14px; font-weight: 550; color: #9a9aad; cursor: pointer; transition: background .2s ease, border-color .2s ease, color .2s ease, transform .12s ease; }
+  .step:active { transform: scale(.98); }
+  .step .n { width: 24px; height: 24px; border-radius: 50%; background: #262633; color: #9a9aad; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 650; transition: background .2s ease, color .2s ease; flex: none; }
+  .step.active { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; box-shadow: 0 4px 20px rgba(124, 58, 237, .35); }
+  .step.active .n { background: rgba(255,255,255,.22); color: #fff; }
+  .step.done { border-color: #6d28d9; color: #c4b5fd; }
+  .step.done .n { background: #6d28d9; color: #fff; }
+  .step-line { width: 72px; height: 1px; background: #262633; flex: none; transition: background .2s ease; }
+  .step-line.done { background: #6d28d9; }
 
-  /* windows */
-  main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 4px 16px 16px; width: 100%; }
+  /* cards */
+  main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; padding: 0 28px; width: 100%; flex: 1; }
   @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } }
-  @media (max-width: 720px) { main { grid-template-columns: 1fr; } }
-  .window { background: #121214; border: 1px solid #232328; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; animation: rise .45s cubic-bezier(.22,.61,.36,1) both; transition: border-color .2s ease, transform .2s ease; }
-  .window:nth-child(2) { animation-delay: .06s; }
-  .window:nth-child(3) { animation-delay: .12s; }
-  .window:hover { border-color: #34343a; }
-  .window header { padding: 11px 14px; border-bottom: 1px solid #1f1f23; background: none; }
-  .window header .num { font-size: 11px; font-weight: 650; color: #60a5fa; letter-spacing: .06em; }
-  .window header h2 { font-size: 13px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
-  .window header .meta { font-size: 12px; color: #8e8e96; margin-left: 2px; }
-  .window header .spacer { flex: 1; }
-  .expand { background: none; border: 1px solid #2e2e33; padding: 3px 10px; font-size: 12px; border-radius: 6px; }
-  .window .body { background: #000; min-height: 180px; display: flex; align-items: center; justify-content: center; }
-  .window img { width: 100%; display: block; aspect-ratio: 4/3; object-fit: contain; background: #000; cursor: zoom-in; animation: fade .35s ease both; }
-  #photoTwinImg, #photoBlueprintImg { aspect-ratio: auto; }
-  .window footer { padding: 9px 14px; font-size: 12px; color: #8e8e96; border-top: 1px solid #1f1f23; min-height: 34px; display: flex; align-items: center; }
-  .window footer:empty::before { content: "—"; color: #3f3f46; }
+  @media (max-width: 720px) { main { grid-template-columns: 1fr; } header.top, main, .bottombar { padding-left: 14px; padding-right: 14px; } }
+  .card { background: #12121c; border: 1px solid #232332; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; animation: rise .45s cubic-bezier(.22,.61,.36,1) both; transition: border-color .2s ease; }
+  .card:nth-child(2) { animation-delay: .06s; }
+  .card:nth-child(3) { animation-delay: .12s; }
+  .card:hover { border-color: #34344a; }
+  .card header { display: flex; align-items: center; gap: 8px; padding: 16px 18px 12px; }
+  .card header h2 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
+  .card header .meta { font-size: 12px; color: #8b8b99; }
+  .card header .spacer { flex: 1; }
+  .icon-btn { background: none; border: none; color: #c6c6d2; cursor: pointer; padding: 6px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; transition: background .15s ease, color .15s ease; }
+  .icon-btn:hover { background: #1e1e2c; color: #fff; }
+  .icon-btn svg { width: 18px; height: 18px; display: block; }
+  .card .body { padding: 0 14px 14px; flex: 1; display: flex; }
+  .card .frame { flex: 1; background: #000; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 220px; position: relative; cursor: zoom-in; }
+  .card .frame img { width: 100%; display: block; object-fit: contain; animation: fade .35s ease both; }
+  .card .frame .empty { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; color: #8b8b99; font-size: 13px; cursor: pointer; }
+  .card .frame .empty svg { width: 28px; height: 28px; color: #6d6d7d; }
+  .card footer { padding: 0 18px 14px; font-size: 12px; color: #8b8b99; min-height: 30px; display: flex; align-items: center; gap: 8px; }
+  .card footer:empty::before { content: "—"; color: #3a3a48; }
+  .card footer .spacer { flex: 1; }
+  .card footer label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  input[type="checkbox"] { accent-color: #7c3aed; }
+
+  /* card menu */
+  .menu-wrap { position: relative; }
+  .menu { display: none; position: absolute; top: 34px; right: 0; z-index: 20; background: #1a1a28; border: 1px solid #2c2c3d; border-radius: 10px; min-width: 150px; padding: 5px; box-shadow: 0 12px 32px rgba(0,0,0,.5); animation: pop .18s ease both; }
+  .menu.open { display: block; }
+  .menu a { display: block; padding: 8px 11px; font-size: 13px; color: #d5d5de; text-decoration: none; border-radius: 7px; }
+  .menu a:hover { background: #262637; color: #fff; }
+
+  /* bottom bar */
+  .bottombar { display: flex; align-items: center; gap: 12px; padding: 16px 28px 22px; animation: fade .35s .1s ease both; }
+  .file-chip { display: inline-flex; align-items: center; gap: 9px; background: #12121c; border: 1px solid #232332; border-radius: 999px; padding: 9px 16px; font-size: 13px; color: #c6c6d2; max-width: 60%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .file-chip svg { width: 16px; height: 16px; color: #8b8b99; flex: none; }
+  .bottombar .spacer { flex: 1; }
+  .btn { font: inherit; font-size: 13px; font-weight: 550; border-radius: 999px; padding: 10px 20px; cursor: pointer; transition: background .15s ease, transform .12s ease, box-shadow .2s ease; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; border: 1px solid #2c2c3d; background: #17171f; color: #ececf1; }
+  .btn:hover { background: #1e1e2c; }
+  .btn:active { transform: scale(.98); }
+  .btn.primary { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; box-shadow: 0 4px 18px rgba(124, 58, 237, .3); }
+  .btn.primary:hover { background: linear-gradient(135deg, #9d71f7, #7c3aed); }
+  .btn svg { width: 15px; height: 15px; }
 
   /* calibrate panel */
-  #calib { display: none; margin: 0 16px 16px; background: #121214; border: 1px solid #232328; border-radius: 12px; padding: 18px; animation: pop .25s ease both; }
-  #calib h3 { margin: 0 0 12px; font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
-  #calib p { margin: 10px 0; font-size: 13px; color: #a1a1aa; }
-  .seg { display: inline-flex; border: 1px solid #2e2e33; border-radius: 8px; overflow: hidden; }
-  .seg label { padding: 7px 13px; font-size: 13px; color: #a1a1aa; cursor: pointer; transition: background .15s ease, color .15s ease; }
-  .seg label + label { border-left: 1px solid #2e2e33; }
-  .seg label:has(input:checked) { background: #2563eb; color: #fff; }
+  #calib { display: none; margin: 0 28px 18px; background: #12121c; border: 1px solid #232332; border-radius: 18px; padding: 20px 22px; animation: pop .25s ease both; }
+  #calib h3 { margin: 0 0 14px; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+  #calib p { margin: 10px 0; font-size: 13px; color: #a1a1af; }
+  #calib label { font-size: 13px; color: #a1a1af; }
+  .seg { display: inline-flex; border: 1px solid #2c2c3d; border-radius: 999px; overflow: hidden; }
+  .seg label { padding: 8px 16px; font-size: 13px; color: #a1a1af; cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .seg label + label { border-left: 1px solid #2c2c3d; }
+  .seg label:has(input:checked) { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff; }
   .seg input { display: none; }
+  input[type="text"], input[type="number"] { font: inherit; font-size: 13px; color: #ececf1; background: #17171f; border: 1px solid #2c2c3d; border-radius: 8px; padding: 8px 11px; }
+  input[type="text"]::placeholder { color: #63636f; }
   .calib-wrap { position: relative; display: inline-block; max-width: 100%; margin-top: 12px; }
-  canvas#photoCanvas { max-width: 100%; cursor: crosshair; border: 1px solid #2e2e33; border-radius: 8px; display: block; background: #000; }
+  canvas#photoCanvas { max-width: 100%; cursor: crosshair; border: 1px solid #2c2c3d; border-radius: 12px; display: block; background: #000; }
   #previewBox { margin-top: 14px; max-width: 460px; }
-  #previewBox img { width: 100%; display: block; border: 1px solid #2e2e33; border-radius: 8px; animation: fade .3s ease both; }
-  #previewBox p { font-size: 12px; color: #8e8e96; margin: 6px 0 0; }
+  #previewBox img { width: 100%; display: block; border: 1px solid #2c2c3d; border-radius: 12px; animation: fade .3s ease both; }
+  #previewBox p { font-size: 12px; color: #8b8b99; margin: 6px 0 0; }
   .point-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
-  .point-chip { font-size: 12px; font-variant-numeric: tabular-nums; background: #17171a; border: 1px solid #2e2e33; border-radius: 999px; padding: 3px 10px; color: #c4c4ca; animation: fade .2s ease both; }
+  .point-chip { font-size: 12px; font-variant-numeric: tabular-nums; background: #17171f; border: 1px solid #2c2c3d; border-radius: 999px; padding: 3px 10px; color: #c6c6d2; animation: fade .2s ease both; }
   .point-chip.ruler { border-color: #0e7490; color: #67e8f9; }
-  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  #msg { padding: 0 16px 16px; color: #a7f3d0; min-height: 1.2em; font-size: 13px; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .btn-row button { font: inherit; font-size: 13px; font-weight: 550; border-radius: 999px; padding: 9px 18px; cursor: pointer; border: 1px solid #2c2c3d; background: #17171f; color: #ececf1; transition: background .15s ease, transform .12s ease; }
+  .btn-row button:hover { background: #1e1e2c; }
+  .btn-row button:active { transform: scale(.98); }
+  .btn-row button.primary { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; }
+  #msg { padding: 0 28px 18px; color: #a7f3d0; min-height: 1.2em; font-size: 13px; }
 
   /* lightbox */
-  #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.94); z-index: 100; padding: 28px; box-sizing: border-box; overflow: auto; }
+  #lightbox { display: none; position: fixed; inset: 0; background: rgba(5,5,10,.95); z-index: 100; padding: 28px; box-sizing: border-box; overflow: auto; }
   #lightbox.open { display: block; animation: fade .2s ease both; }
-  #lightbox .lb-inner { max-width: 1400px; margin: 0 auto; background: #000; border: 1px solid #2e2e33; border-radius: 12px; overflow: hidden; animation: pop .25s ease both; }
+  #lightbox .lb-inner { max-width: 1400px; margin: 0 auto; background: #000; border: 1px solid #2c2c3d; border-radius: 16px; overflow: hidden; animation: pop .25s ease both; }
   #lightbox .lb-inner img { width: 100%; display: block; }
-  #lbClose { position: fixed; top: 14px; right: 18px; z-index: 101; font-size: 13px; padding: 8px 14px; }
-  #lbTitle { color: #e8e8ea; text-align: center; padding: 10px; font-size: 13px; }
+  #lbClose { position: fixed; top: 14px; right: 18px; z-index: 101; }
+  #lbTitle { color: #ececf1; text-align: center; padding: 10px; font-size: 13px; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Photo to 2D Digital Twin <span>· Blueprint</span></h1>
-  <span id="statusBadge" class="status"><span class="dot"></span><span id="statusText">Checking</span></span>
-  <span class="spacer"></span>
-  <label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> 100 mm grid</label>
+<header class="top">
+  <h1>Photo to 2D Digital Twin</h1>
 </header>
 
-<div class="toolbar">
-  <input type="file" id="photoFile" accept="image/*">
-  <button class="primary" onclick="uploadPhoto()">Upload photo</button>
-  <button onclick="openPhotoCalib()">Calibrate</button>
-  <span class="sep"></span>
-  <label>Object <input id="photoTitle" type="text" value="" placeholder="e.g. Submarine"></label>
-  <span class="sep"></span>
-  <a href="/photo_twin.png"><button>Download twin PNG</button></a>
-  <a href="/photo_blueprint.jpg"><button>Download blueprint JPG</button></a>
+<div class="steps">
+  <button class="step active" id="step1" onclick="stepAction(1)"><span class="n">1</span>Upload</button>
+  <span class="step-line" id="line1"></span>
+  <button class="step" id="step2" onclick="stepAction(2)"><span class="n">2</span>Calibrate</button>
+  <span class="step-line" id="line2"></span>
+  <button class="step" id="step3" onclick="stepAction(3)"><span class="n">3</span>Generate</button>
 </div>
 
+<input type="file" id="photoFile" accept="image/*" style="display:none" onchange="uploadPhoto()">
+
 <main>
-  <section class="window">
-    <header><span class="num">01</span><h2>Photo</h2><span class="meta">As taken</span><span class="spacer"></span><button class="expand" onclick="openLightbox('photo')">Expand</button></header>
-    <div class="body"><img id="photoImg" src="" alt="Upload a photo to see it here" onclick="openLightbox('photo')"></div>
+  <section class="card">
+    <header><h2>Photo</h2><span class="spacer"></span>
+      <button class="icon-btn" onclick="openLightbox('photo')" title="Expand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+      <span class="menu-wrap"><button class="icon-btn" onclick="toggleMenu('menuPhoto', event)" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      <span class="menu" id="menuPhoto"><a href="/uploaded.jpg" download="photo.jpg">Download photo</a><a href="#" onclick="openLightbox('photo'); return false;">Expand</a></span></span>
+    </header>
+    <div class="body"><div class="frame" id="photoFrame" onclick="photoFrameClick()">
+      <img id="photoImg" src="" alt="" style="display:none">
+      <span class="empty" id="photoEmpty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5L6 23"/></svg>Upload a photo to start</span>
+    </div></div>
     <footer id="photoMeta"></footer>
   </section>
-  <section class="window">
-    <header><span class="num">02</span><h2>Twin</h2><span class="meta">Top-down · 5 px/mm</span><span class="spacer"></span><button class="expand" onclick="openLightbox('twin')">Expand</button></header>
-    <div class="body"><img id="photoTwinImg" src="" alt="The twin appears here after calibration" onclick="openLightbox('twin')"></div>
-    <footer id="twinMeta"></footer>
+  <section class="card">
+    <header><h2>Twin</h2><span class="spacer"></span>
+      <button class="icon-btn" onclick="openLightbox('twin')" title="Expand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+      <span class="menu-wrap"><button class="icon-btn" onclick="toggleMenu('menuTwin', event)" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      <span class="menu" id="menuTwin"><a href="/photo_twin.png" download="twin.png">Download twin PNG</a><a href="#" onclick="openLightbox('twin'); return false;">Expand</a></span></span>
+    </header>
+    <div class="body"><div class="frame" onclick="openLightbox('twin')">
+      <img id="photoTwinImg" src="" alt="" style="display:none">
+      <span class="empty" id="twinEmpty">Calibrate to generate the twin</span>
+    </div></div>
+    <footer><span id="twinMeta"></span><span class="spacer"></span><label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> Grid</label></footer>
   </section>
-  <section class="window">
-    <header><span class="num">03</span><h2>Blueprint</h2><span class="meta">Dimensioned · mm</span><span class="spacer"></span><button class="expand" onclick="openLightbox('blueprint')">Expand</button></header>
-    <div class="body"><img id="photoBlueprintImg" src="" alt="The blueprint appears here after calibration" onclick="openLightbox('blueprint')"></div>
+  <section class="card">
+    <header><h2>Blueprint</h2><span class="spacer"></span>
+      <button class="icon-btn" onclick="openLightbox('blueprint')" title="Expand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
+      <span class="menu-wrap"><button class="icon-btn" onclick="toggleMenu('menuBlueprint', event)" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
+      <span class="menu" id="menuBlueprint"><a href="/photo_blueprint.jpg" download="blueprint.jpg">Download blueprint JPG</a><a href="#" onclick="openLightbox('blueprint'); return false;">Expand</a></span></span>
+    </header>
+    <div class="body"><div class="frame" onclick="openLightbox('blueprint')">
+      <img id="photoBlueprintImg" src="" alt="" style="display:none">
+      <span class="empty" id="blueprintEmpty">Calibrate to generate the blueprint</span>
+    </div></div>
     <footer id="blueprintMeta"></footer>
   </section>
 </main>
@@ -138,16 +176,17 @@
   </p>
   <p id="refFieldsScale" style="display:none">
     <label>Scale length (mm) <input id="rulerMm" type="number" value="300" style="width:80px"></label>
-    <span style="color:#8e8e96">Place the scale flat beside the object, in the same plane, fully in frame.</span>
+    <span style="color:#8b8b99">Place the scale flat beside the object, in the same plane, fully in frame.</span>
   </p>
+  <p><label>Object <input id="photoTitle" type="text" value="" placeholder="e.g. Submarine" style="width:160px"></label></p>
   <div class="calib-wrap">
     <canvas id="photoCanvas"></canvas>
   </div>
   <p id="photoClickInfo">0 of 4 points</p>
   <div class="point-list" id="pointList"></div>
-  <p style="color:#8e8e96">Drag a point to move it. Backspace removes the last point. Preview checks the selection before you apply it.</p>
+  <p style="color:#8b8b99">Drag a point to move it. Backspace removes the last point. Preview checks the selection before you apply it.</p>
   <div class="btn-row">
-    <button class="primary" onclick="applyPhotoCalib()">Apply — make twin and blueprint</button>
+    <button class="primary" onclick="applyPhotoCalib()">Generate</button>
     <button onclick="previewPhotoCalib()">Preview</button>
     <button onclick="undoPhotoClick()">Undo last point</button>
     <button onclick="clearPhotoClicks()">Clear</button>
@@ -159,8 +198,15 @@
 
 <div id="msg"></div>
 
+<div class="bottombar">
+  <span class="file-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5L6 23"/></svg><span id="fileName">No file selected</span></span>
+  <span class="spacer"></span>
+  <a class="btn" href="/photo_twin.png" download="twin.png"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>Export PNG</a>
+  <a class="btn primary" href="/photo_blueprint.jpg" download="blueprint.jpg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>Export Blueprint</a>
+</div>
+
 <div id="lightbox" onclick="if(event.target===this) closeLightbox()">
-  <button id="lbClose" onclick="closeLightbox()">Close ×</button>
+  <button id="lbClose" class="btn" onclick="closeLightbox()">Close ×</button>
   <div id="lbTitle"></div>
   <div class="lb-inner" id="lbInner"></div>
 </div>
@@ -174,15 +220,45 @@ let dragIdx = -1;
 let downPos = null;
 function showMsg(t) { document.getElementById('msg').textContent = t; }
 
+function setSteps(state) {
+  // state: 1 = nothing yet, 2 = uploaded, 3 = calibrated
+  const steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
+  const lines = [document.getElementById('line1'), document.getElementById('line2')];
+  steps.forEach((el, i) => {
+    const n = i + 1;
+    el.classList.toggle('active', n === state);
+    el.classList.toggle('done', n < state);
+    el.querySelector('.n').textContent = n < state ? '✓' : String(n);
+  });
+  lines.forEach((el, i) => el.classList.toggle('done', i + 2 <= state));
+}
+function stepAction(n) {
+  if (n === 1) { document.getElementById('photoFile').click(); }
+  else if (n === 2) { openPhotoCalib(); }
+  else {
+    const need = refMode === 'a4' ? 4 : 6;
+    if (photoClicks.length === need) applyPhotoCalib();
+    else openPhotoCalib();
+  }
+}
+function toggleMenu(id, e) {
+  e.stopPropagation();
+  document.querySelectorAll('.menu.open').forEach(m => { if (m.id !== id) m.classList.remove('open'); });
+  document.getElementById(id).classList.toggle('open');
+}
+document.addEventListener('click', () => document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open')));
+function photoFrameClick() {
+  const img = document.getElementById('photoImg');
+  if (!img.src) document.getElementById('photoFile').click();
+  else openLightbox('photo');
+}
+
 async function refreshStatus() {
   const s = await (await fetch('/status')).json();
-  const b = document.getElementById('statusBadge');
-  const t = document.getElementById('statusText');
-  if (!s.photo_uploaded) { t.textContent = 'No photo yet'; b.className = 'status'; return; }
-  t.textContent = s.photo_calibrated
-    ? `${s.photo_title || 'Object'} — ${s.photo_twin_px[0]}×${s.photo_twin_px[1]} px, ${s.calibration_mode === 'scale' ? '30 cm scale' : 'A4'}`
-    : 'Photo uploaded — not calibrated';
-  b.className = 'status ' + (s.photo_calibrated ? 'ok' : '');
+  setSteps(!s.photo_uploaded ? 1 : s.photo_calibrated ? 3 : 2);
+  if (s.photo_uploaded) {
+    document.getElementById('fileName').textContent = s.photo_filename || 'Photo uploaded';
+  }
 }
 refreshStatus(); setInterval(refreshStatus, 3000);
 
@@ -196,7 +272,7 @@ function openLightbox(kind) {
   if (kind === 'photo') { src = get('photoImg')?.src; label = 'Photo'; }
   else if (kind === 'twin') { src = get('photoTwinImg')?.src; label = 'Twin'; }
   else { src = get('photoBlueprintImg')?.src; label = 'Blueprint'; }
-  if (!src) { showMsg('Calibrate a photo first.'); return; }
+  if (!src) { showMsg(kind === 'photo' ? 'Upload a photo first.' : 'Calibrate a photo first.'); return; }
   title.textContent = label;
   inner.innerHTML = `<img src="${src}" alt="${label}">`;
   lb.classList.add('open');
@@ -210,18 +286,26 @@ document.addEventListener('keydown', (e) => {
 // ---------- photo mode ----------
 async function uploadPhoto() {
   const f = document.getElementById('photoFile').files[0];
-  if (!f) { showMsg('Choose a photo file first.'); return; }
+  if (!f) return;
   const fd = new FormData(); fd.append('photo', f);
   const r = await fetch('/upload_photo', { method: 'POST', body: fd });
   const j = await r.json();
   showMsg(j.message || j.error || 'Done.');
   if (j.ok) {
-    document.getElementById('photoImg').src = '/uploaded.jpg?t=' + Date.now();
+    const img = document.getElementById('photoImg');
+    img.src = '/uploaded.jpg?t=' + Date.now();
+    img.style.display = '';
+    document.getElementById('photoEmpty').style.display = 'none';
     document.getElementById('photoTwinImg').src = '';
     document.getElementById('photoBlueprintImg').src = '';
+    document.getElementById('photoTwinImg').style.display = 'none';
+    document.getElementById('photoBlueprintImg').style.display = 'none';
+    document.getElementById('twinEmpty').style.display = '';
+    document.getElementById('blueprintEmpty').style.display = '';
     document.getElementById('photoMeta').textContent = `${j.filename} · ${j.width_px}×${j.height_px} px`;
     document.getElementById('twinMeta').textContent = '';
     document.getElementById('blueprintMeta').textContent = '';
+    document.getElementById('fileName').textContent = j.filename;
     refreshStatus();
   }
 }
@@ -330,7 +414,21 @@ async function previewPhotoCalib() {
   const blob = await r.blob();
   const url = URL.createObjectURL(blob);
   document.getElementById('previewBox').innerHTML = `<img src="${url}" alt="Warp preview"><p>Preview — warped view from these points. Drag a point to adjust, then Preview again, or Apply.</p>`;
-  showMsg('Preview ready. If it looks right, Apply.');
+  showMsg('Preview ready. If it looks right, Generate.');
+}
+
+function showResults(j) {
+  const t = Date.now();
+  const twin = document.getElementById('photoTwinImg');
+  const bp = document.getElementById('photoBlueprintImg');
+  twin.src = '/photo_twin.jpg?t=' + t;
+  bp.src = '/photo_blueprint.jpg?t=' + t;
+  twin.style.display = '';
+  bp.style.display = '';
+  document.getElementById('twinEmpty').style.display = 'none';
+  document.getElementById('blueprintEmpty').style.display = 'none';
+  document.getElementById('twinMeta').textContent = `${j.twin_px[0]}×${j.twin_px[1]} px · ${j.blueprint.ref_w_mm}×${j.blueprint.ref_h_mm} mm`;
+  document.getElementById('blueprintMeta').textContent = `Object ${j.blueprint.object_w_mm} × ${j.blueprint.object_h_mm} mm`;
 }
 
 async function applyPhotoCalib() {
@@ -340,14 +438,7 @@ async function applyPhotoCalib() {
   const r = await fetch(url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
   const j = await r.json();
   showMsg(j.message || j.error || 'Done.');
-  if (j.ok) {
-    const t = Date.now();
-    document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
-    document.getElementById('twinMeta').textContent = `${j.twin_px[0]}×${j.twin_px[1]} px · ${j.blueprint.ref_w_mm}×${j.blueprint.ref_h_mm} mm`;
-    document.getElementById('blueprintMeta').textContent = `Object ${j.blueprint.object_w_mm} × ${j.blueprint.object_h_mm} mm`;
-    closePhotoCalib(); refreshStatus();
-  }
+  if (j.ok) { showResults(j); closePhotoCalib(); refreshStatus(); }
 }
 
 async function autoPhotoAruco() {
@@ -357,14 +448,7 @@ async function autoPhotoAruco() {
   const r = await fetch('/photo_aruco', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
   const j = await r.json();
   showMsg(j.message || j.error || 'Done.');
-  if (j.ok) {
-    const t = Date.now();
-    document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
-    document.getElementById('twinMeta').textContent = `${j.twin_px[0]}×${j.twin_px[1]} px · ${j.blueprint.ref_w_mm}×${j.blueprint.ref_h_mm} mm`;
-    document.getElementById('blueprintMeta').textContent = `Object ${j.blueprint.object_w_mm} × ${j.blueprint.object_h_mm} mm`;
-    refreshStatus();
-  }
+  if (j.ok) { showResults(j); refreshStatus(); }
 }
 
 async function toggleGrid() {

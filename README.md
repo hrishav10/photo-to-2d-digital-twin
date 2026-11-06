@@ -18,8 +18,13 @@ Every photo produces **two** twins, side by side, plus the photo:
   centre lines, and a title block with the name you type in —
   there is no default object name, the box starts blank.
 
-Click any window to open it big (Expand button, or click the image).
-Close with X, Esc, or clicking outside.
+The top shows the workflow as three steps — Upload,
+Calibrate, Generate — with the current step highlighted;
+click a step to go there. Each card has an expand button
+and a menu (Download / Expand). The bottom bar shows the
+file name and the Export buttons (PNG for the twin,
+Blueprint for the drawing). Click any card image to open
+it big. Close with X, Esc, or clicking outside.
 
 The dimensions are real: the object's width/height are measured
 from its outline in the twin, using the homography scale
