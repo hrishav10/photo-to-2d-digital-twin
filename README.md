@@ -56,8 +56,8 @@ the corners, and use the A4 mode's auto-calibration.
 The calibration canvas is full-width, and selection is
 deliberately precise:
 
-- As you click, the selected area is drawn as a polygon
-  with numbered points, plus a guide line to the cursor.
+- As you click, each point is shown as a numbered dot —
+  no connecting lines, just the points.
 - Drag any point to move it. Backspace (or Undo) removes
   the last point.
 - **Preview** warps the photo from the points as clicked,
@@ -66,6 +66,23 @@ deliberately precise:
 
 The layout is full-width with no side margins, and the
 interface uses only restrained fade and rise animations.
+
+## Sharp blueprint lines — SVG, not JPG
+
+The blueprint shown in the app is an **SVG (vector)**,
+not a JPG. That is the whole fix for noisy lines:
+
+- SVG lines are drawn from coordinates, not pixels, so
+  they stay sharp at any zoom — no JPEG compression
+  artefacts, no jagged 1 px lines.
+- The raster PNG version no longer draws the Canny edge
+  layer (every photo edge used to become a white pixel,
+  which read as noise). It draws only clean geometry —
+  the object's traced outline, inner parts, centre and
+  dimension lines — all anti-aliased (`LINE_AA`) and
+  2–3 px thick.
+- Download the SVG for the sharpest result; the PNG is
+  lossless and uses the same clean drawing.
 
 ## Curved objects — e.g. a guitar on the floor
 

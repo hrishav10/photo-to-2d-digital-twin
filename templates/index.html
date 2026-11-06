@@ -72,6 +72,7 @@
   <button onclick="openPhotoCalib()">Calibrate</button>
   <label>Object name <input id="photoTitle" type="text" value="" placeholder="e.g. Submarine" style="width:150px"></label>
   <a href="/photo_twin.png"><button>Download twin PNG</button></a>
+  <a href="/photo_blueprint.svg" download="blueprint.svg"><button>Download blueprint SVG</button></a>
   <a href="/photo_blueprint.png"><button>Download blueprint PNG</button></a>
 </div>
 
@@ -186,7 +187,7 @@ async function uploadPhoto() {
   }
 }
 
-// ---------- selection: polygon, drag, preview ----------
+// ---------- selection: points, drag, preview ----------
 function canvasPos(e) {
   const c = document.getElementById('photoCanvas'), r = c.getBoundingClientRect();
   return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)];
@@ -199,20 +200,6 @@ function redrawCanvas() {
   ctx.clearRect(0, 0, c.width, c.height);
   ctx.drawImage(calibImg, 0, 0);
   if (photoClicks.length === 0) return;
-  // polygon: lines between points, closed when complete
-  const need = refMode === 'a4' ? 4 : 6;
-  const poly = photoClicks.slice(0, 4);
-  ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.fillStyle = 'rgba(37,99,235,0.12)';
-  ctx.beginPath();
-  poly.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
-  if (poly.length === 4) ctx.closePath();
-  ctx.fill(); ctx.stroke();
-  // guide line from last point to cursor
-  if (cursorPos && photoClicks.length > 0 && photoClicks.length < need) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.setLineDash([6, 5]); ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(photoClicks[photoClicks.length - 1][0], photoClicks[photoClicks.length - 1][1]);
-    ctx.lineTo(cursorPos[0], cursorPos[1]); ctx.stroke(); ctx.setLineDash([]);
-  }
   // numbered markers
   photoClicks.forEach(([x, y], i) => {
     const isRuler = refMode === 'scale' && i >= 4;
@@ -319,7 +306,7 @@ async function applyPhotoCalib() {
   if (j.ok) {
     const t = Date.now();
     document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + t;
+    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.svg?t=' + t;
     closePhotoCalib(); refreshStatus();
   }
 }
@@ -334,7 +321,7 @@ async function autoPhotoAruco() {
   if (j.ok) {
     const t = Date.now();
     document.getElementById('photoTwinImg').src = '/photo_twin.jpg?t=' + t;
-    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.jpg?t=' + Date.now();
+    document.getElementById('photoBlueprintImg').src = '/photo_blueprint.svg?t=' + Date.now();
     refreshStatus();
   }
 }

@@ -104,17 +104,20 @@ def _dashed_line(img, p1, p2, color, thickness=1, dash=14, gap=10):
     while d < length:
         e = min(d + dash, length)
         cv2.line(img, (int(x1 + dx * d), int(y1 + dy * d)),
-                 (int(x1 + dx * e), int(y1 + dy * e)), color, thickness)
+                 (int(x1 + dx * e), int(y1 + dy * e)), color, thickness,
+                 cv2.LINE_AA)
         d = e + gap
 
 
 def _dim_h(img, x0, x1, y, label, color=CYAN):
     """Horizontal dimension line with arrows + label, in px coords."""
-    cv2.line(img, (x0, y), (x1, y), color, 2)
-    cv2.arrowedLine(img, (x0, y), (x0 + 14, y), color, 2, tipLength=0.6)
-    cv2.arrowedLine(img, (x1, y), (x1 - 14, y), color, 2, tipLength=0.6)
-    cv2.line(img, (x0, y - 6), (x0, y + 6), color, 2)
-    cv2.line(img, (x1, y - 6), (x1, y + 6), color, 2)
+    cv2.line(img, (x0, y), (x1, y), color, 2, cv2.LINE_AA)
+    cv2.arrowedLine(img, (x0, y), (x0 + 14, y), color, 2, tipLength=0.6,
+                    line_type=cv2.LINE_AA)
+    cv2.arrowedLine(img, (x1, y), (x1 - 14, y), color, 2, tipLength=0.6,
+                    line_type=cv2.LINE_AA)
+    cv2.line(img, (x0, y - 6), (x0, y + 6), color, 2, cv2.LINE_AA)
+    cv2.line(img, (x1, y - 6), (x1, y + 6), color, 2, cv2.LINE_AA)
     (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
     tx = (x0 + x1 - tw) // 2
     cv2.rectangle(img, (tx - 6, y - th - 10), (tx + tw + 6, y + 6),
@@ -125,11 +128,13 @@ def _dim_h(img, x0, x1, y, label, color=CYAN):
 
 def _dim_v(img, y0, y1, x, label, color=CYAN):
     """Vertical dimension line with arrows + label, in px coords."""
-    cv2.line(img, (x, y0), (x, y1), color, 2)
-    cv2.arrowedLine(img, (x, y0), (x, y0 + 14), color, 2, tipLength=0.6)
-    cv2.arrowedLine(img, (x, y1), (x, y1 - 14), color, 2, tipLength=0.6)
-    cv2.line(img, (x - 6, y0), (x + 6, y0), color, 2)
-    cv2.line(img, (x - 6, y1), (x + 6, y1), color, 2)
+    cv2.line(img, (x, y0), (x, y1), color, 2, cv2.LINE_AA)
+    cv2.arrowedLine(img, (x, y0), (x, y0 + 14), color, 2, tipLength=0.6,
+                    line_type=cv2.LINE_AA)
+    cv2.arrowedLine(img, (x, y1), (x, y1 - 14), color, 2, tipLength=0.6,
+                    line_type=cv2.LINE_AA)
+    cv2.line(img, (x - 6, y0), (x + 6, y0), color, 2, cv2.LINE_AA)
+    cv2.line(img, (x - 6, y1), (x + 6, y1), color, 2, cv2.LINE_AA)
     # vertical text: draw it on a small canvas and rotate it
     (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
     txt = np.zeros((th + 16, tw + 8, 3), dtype=np.uint8)
@@ -217,7 +222,7 @@ def make_blueprint_svg(twin, width_mm, height_mm, px_per_mm,
     for gy in range(0, sh, step):
         grid.append(f'<line x1="0" y1="{gy}" x2="{sw}" y2="{gy}" stroke="#123a6e" stroke-width="1"/>')
 
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {sw} {sh}" width="100%" data-px-per-mm="{px_per_mm:g}">
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {sw} {sh}" width="100%" data-px-per-mm="{px_per_mm:g}" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
 <defs><marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#00dcff"/></marker></defs>
 <rect width="{sw}" height="{sh}" fill="#0a2e6e"/>
 <g id="bp-grid">{''.join(grid)}</g>
@@ -284,24 +289,27 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
     for y in range(0, sheet.shape[0], step5):
         cv2.line(sheet, (0, y), (sheet.shape[1], y), BLUE_GRID, 1)
 
-    # --- line drawing of the twin: edges in white ---
-    gray = cv2.cvtColor(twin, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(gray, 50, 150)
-    # keep only strong, object-like edges: dilate slightly so lines read
-    edges = cv2.dilate(edges, np.ones((2, 2), np.uint8), iterations=1)
-    sheet[oy:oy + th, ox:ox + tw][edges > 0] = WHITE
-
     # --- object outline + inner parts ---
+    # No Canny edge layer: every photo edge used to become a white
+    # pixel, which read as noise. The drawing is now only clean
+    # geometry, drawn anti-aliased. The outline follows the
+    # object's traced polygon (so a curved guitar stays curved),
+    # not just its bounding box.
     obj = _find_object_rect(twin)
     if obj is None:
         obj = (0, 0, tw, th)  # fallback: the whole twin is the object
     x, y, w, h = obj
-    cv2.rectangle(sheet, (ox + x, oy + y), (ox + x + w, oy + y + h),
-                  WHITE, 3)
+    poly = _find_object_polygon(twin)
+    if poly:
+        pts = np.array([(ox + px, oy + py) for px, py in poly],
+                       dtype=np.int32)
+        cv2.polylines(sheet, [pts], True, WHITE, 3, cv2.LINE_AA)
+    else:
+        cv2.rectangle(sheet, (ox + x, oy + y), (ox + x + w, oy + y + h),
+                      WHITE, 3, cv2.LINE_AA)
     for (ix, iy, iw, ih) in _inner_rects(twin):
         cv2.rectangle(sheet, (ox + ix, oy + iy), (ox + ix + iw, oy + iy + ih),
-                      LIGHT_BLUE, 1)
+                      LIGHT_BLUE, 2, cv2.LINE_AA)
 
     obj_w_mm = w / px_per_mm
     obj_h_mm = h / px_per_mm
@@ -313,18 +321,19 @@ def make_blueprint(twin, width_mm, height_mm, px_per_mm,
 
     # --- dimension lines (real mm, from the object rect) ---
     # extension lines from the object to the dimension lines
-    cv2.line(sheet, (ox + x, oy + y), (ox + x, my - 55), CYAN, 1)
-    cv2.line(sheet, (ox + x + w, oy + y), (ox + x + w, my - 55), CYAN, 1)
-    cv2.line(sheet, (ox + x, oy + y), (mx - 55, oy + y), CYAN, 1)
-    cv2.line(sheet, (ox + x, oy + y + h), (mx - 55, oy + y + h), CYAN, 1)
+    cv2.line(sheet, (ox + x, oy + y), (ox + x, my - 55), CYAN, 1, cv2.LINE_AA)
+    cv2.line(sheet, (ox + x + w, oy + y), (ox + x + w, my - 55), CYAN, 1, cv2.LINE_AA)
+    cv2.line(sheet, (ox + x, oy + y), (mx - 55, oy + y), CYAN, 1, cv2.LINE_AA)
+    cv2.line(sheet, (ox + x, oy + y + h), (mx - 55, oy + y + h), CYAN, 1, cv2.LINE_AA)
     _dim_h(sheet, ox + x, ox + x + w, my - 40, f"{obj_w_mm:.0f} mm")
     _dim_v(sheet, oy + y, oy + y + h, mx - 40, f"{obj_h_mm:.0f} mm")
 
     # --- border + title block (game-blueprint style) ---
     cv2.rectangle(sheet, (8, 8), (sheet.shape[1] - 9, sheet.shape[0] - 9),
-                  WHITE, 2)
+                  WHITE, 2, cv2.LINE_AA)
     ty = sheet.shape[0] - bottom + 12
-    cv2.line(sheet, (8, ty - 8), (sheet.shape[1] - 9, ty - 8), WHITE, 2)
+    cv2.line(sheet, (8, ty - 8), (sheet.shape[1] - 9, ty - 8), WHITE, 2,
+             cv2.LINE_AA)
     cv2.putText(sheet, f"{title}  —  TOP VIEW", (24, ty + 22),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.9, WHITE, 2, cv2.LINE_AA)
     today = datetime.date.today().isoformat()
