@@ -1,36 +1,3 @@
-#!/usr/bin/env python3
-"""Photo -> 2D twin: warp one angled photo into a true top-down, scaled view.
-
-The pipeline from today's chat, in code:
-  1. pick the 4 corners of a known-size reference in the photo
-     (an A4 sheet, 210 x 297 mm, is the zero-cost default)
-  2. homography-warp those corners into a rectangle
-  3. save the top-down view, scaled so 1 mm = --px-per-mm pixels
-
-Modes for step 1 (in order of preference):
-  --corners x1,y1 x2,y2 x3,y3 x4,y4   non-interactive, TL TR BR BL
-  --aruco                              auto-detect 4 printed ArUco markers
-                                       (ids 0,1,2,3 placed TL TR BR BL)
-  (default)                            click the 4 corners in the window,
-                                       TL TR BR BL, then press any key
-
-Optional --svg writes a simple SVG outline (largest contour of the warped
-view) in real mm units, so the result is a measurable plan, not just a picture.
-
-Optional --blueprint writes a game-style blueprint sheet: the twin
-redrawn in white on blueprint-blue, with dimension lines labelled
-in real mm, centre lines and a title block. Use --title to name it,
-e.g. --title CALCULATOR.
-
-Needs: pip install opencv-python numpy
-Runs fine on a ThinkPad X240-class machine: this is one warp, not COLMAP.
-
-Example:
-  python3 photo_to_2d.py room.jpg
-  python3 photo_to_2d.py room.jpg --corners 120,80 900,110 880,700 140,660
-  python3 photo_to_2d.py room.jpg --aruco --px-per-mm 10
-  python3 photo_to_2d.py calculator.jpg --corners 120,80 900,110 880,700 140,660 --blueprint calculator_blueprint.png --title CALCULATOR
-"""
 import argparse
 import sys
 
@@ -103,7 +70,7 @@ def aruco_corners(img):
     try:
         detector = cv2.aruco.ArucoDetector(dictionary)
         corners_list, ids, _ = detector.detectMarkers(img)
-    except AttributeError:  # older OpenCV
+    except AttributeError:
         corners_list, ids, _ = cv2.aruco.detectMarkers(img, dictionary)
     if ids is None or len(ids) != 4:
         found = sorted(ids.flatten().tolist()) if ids is not None else []
@@ -124,7 +91,7 @@ def write_svg(warped, path, px_per_mm):
         return
     cnt = max(contours, key=cv2.contourArea)
     approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
-    pts = approx.reshape(-1, 2) / px_per_mm  # pixels -> mm
+    pts = approx.reshape(-1, 2) / px_per_mm
     poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
     h_mm = warped.shape[0] / px_per_mm
     w_mm = warped.shape[1] / px_per_mm

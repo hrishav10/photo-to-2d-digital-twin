@@ -1,59 +1,3 @@
-#!/usr/bin/env python3
-"""
-Photo to 2D Digital Twin — simple Flask app
-===========================================
-Two ways to get a 2D twin, in one app:
-
-  A. PHOTO MODE (the original photo-to-2D idea)
-     Upload one photo -> corners are auto-detected (the A4
-     sheet, or the object + ruler in scale mode) -> instantly
-     get the top-down twin in the other window, at 5 px/mm.
-     Clicking the 4 corners still works as a fallback.
-     Same pipeline as photo_to_2d.py, but in the browser.
-
-  B. BIG OBJECTS — 30 cm scale reference
-     No A4 sheet big enough? Put a 30 cm ruler/scale beside the
-     object, flat in the same plane. Click the 4 corners of the
-     object, then the 2 ends of the scale (0 cm and 30 cm).
-     The scale sets the real px/mm, so the blueprint dimensions
-     are still in real mm.
-
-  Live webcam mode is paused for now (use --live to re-enable it).
-
-How it works (the whole idea in 3 steps):
-  1. CAPTURE  - a photo upload, or OpenCV grabbing webcam frames
-                in a background thread, always keeping the newest.
-  2. CALIBRATE (once) - you tell the app where 4 known corners are
-                in the image (click them, or auto-detect 4 ArUco
-                markers). From those 4 points OpenCV computes ONE
-                homography matrix H with cv2.getPerspectiveTransform().
-                H is the "camera angle remover".
-  3. TWIN - warp with that H: cv2.warpPerspective(image, H, (W, H_px)).
-            That warped image IS the 2D twin: flat, top-down,
-            and measurable (px / px_per_mm = mm).
-
-No COLMAP, no GPU. Live runs at 640x480 and 2 px/mm on a
-ThinkPad X240-class machine; photo mode runs at 5 px/mm.
-
-Windows (photo only, for now):
-  Left = uploaded photo, Middle = real 2D twin (static),
-  Right = interactive blueprint (blue, dimensioned, game-style)
-  Click any window to open it big; click X / Esc / outside to close.
-
-The blueprint (blueprint.py) is the same twin redrawn as a
-blueprint: white edges on blueprint-blue, dimension
-lines in real mm, centre lines, title block. The real twin
-stays visible too, so you can check the blueprint against it.
-
-Run:
-  pip install -r requirements.txt
-  python3 app.py
-  open http://127.0.0.1:5000
-
-  # no camera? photo mode still works:
-  python3 app.py --no-camera
-  # CLI version (no web UI): python3 photo_to_2d.py room.jpg
-"""
 import argparse
 import json
 import os
@@ -69,19 +13,14 @@ from detect import detect_quad, detect_ruler
 
 app = Flask(__name__)
 
-# ---------------------------------------------------------------- config
 CALIB_FILE = os.path.join(os.path.dirname(__file__), "calibration.json")
-DEFAULT_WIDTH_MM = 210.0    # A4 sheet — the default reference
+DEFAULT_WIDTH_MM = 210.0
 DEFAULT_HEIGHT_MM = 297.0
-DEFAULT_PX_PER_MM = 2.0     # live speed: A4 twin = 420 x 594 px.
-PHOTO_PX_PER_MM = 5.0       # photo mode: A4 twin = 1050 x 1485 px,
-                            # same as photo_to_2d.py
+DEFAULT_PX_PER_MM = 2.0
+PHOTO_PX_PER_MM = 5.0
 
-# ---------------------------------------------------------------- state
-# Everything the twin needs is just this one matrix + its size.
-# Calibrate once, reuse for every frame until you hit Reset.
 state = {
-    "homography": None,          # 3x3 numpy array, or None = not calibrated
+    "homography": None,
     "width_mm": DEFAULT_WIDTH_MM,
     "height_mm": DEFAULT_HEIGHT_MM,
     "px_per_mm": DEFAULT_PX_PER_MM,
@@ -115,12 +54,11 @@ def load_calibration():
         state["height_mm"] = d["height_mm"]
         state["px_per_mm"] = d.get("px_per_mm", DEFAULT_PX_PER_MM)
         print(f"Loaded saved calibration from {CALIB_FILE}")
-    except Exception as e:  # corrupt file -> start uncalibrated
+    except Exception as e:
         print(f"Ignoring bad {CALIB_FILE}: {e}")
 
 
 def compute_homography(src_points, width_mm, height_mm, px_per_mm):
-    """4 clicked corners (TL, TR, BR, BL) -> homography + twin size."""
     out_w = int(round(width_mm * px_per_mm))
     out_h = int(round(height_mm * px_per_mm))
     src = np.array(src_points, dtype=np.float32)
@@ -135,25 +73,16 @@ def twin_size():
             int(round(state["height_mm"] * state["px_per_mm"])))
 
 
-# ---------------------------------------------------------------- photo mode
-# Photo mode keeps its own image + homography, separate from live, so
-# uploading a photo never breaks a live calibration (and vice versa).
 photo_state = {
-    "image": None,           # decoded cv2 image (BGR), or None
+    "image": None,
     "filename": "",
     "homography": None,
     "width_mm": DEFAULT_WIDTH_MM,
     "height_mm": DEFAULT_HEIGHT_MM,
     "px_per_mm": PHOTO_PX_PER_MM,
-    # No default object name: the user types it in the UI.
-    # Blank here means the blueprint falls back to "OBJECT".
     "title": "OBJECT",
-    "calibration_mode": "a4",  # "a4" or "scale"
-    # ruler ends in twin px (scale mode only): the blueprint
-    # blanks this band from object detection, so the reference
-    # scale is never measured as an object of its own.
+    "calibration_mode": "a4",
     "ruler_twin": None,
-    # dimension unit for the blueprint + messages: "mm", "cm" or "m"
     "unit": "mm",
 }
 
@@ -171,13 +100,11 @@ def draw_grid(img, px_per_mm):
 
 
 def detect_aruco_points(frame):
-    """Return 4 corner points (TL, TR, BR, BL) from ArUco ids 0-3,
-    or (None, found_ids) if they are not all in frame."""
     dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
     try:
         detector = cv2.aruco.ArucoDetector(dictionary)
         corners_list, ids, _ = detector.detectMarkers(frame)
-    except AttributeError:  # older OpenCV
+    except AttributeError:
         corners_list, ids, _ = cv2.aruco.detectMarkers(frame, dictionary)
     if ids is None or sorted(ids.flatten().tolist()) != [0, 1, 2, 3]:
         found = sorted(ids.flatten().tolist()) if ids is not None else []
@@ -187,7 +114,6 @@ def detect_aruco_points(frame):
 
 
 def warp_photo_to_twin():
-    """Uploaded photo -> its 2D twin (5 px/mm), or None if not ready."""
     if photo_state["image"] is None or photo_state["homography"] is None:
         return None
     w = int(round(photo_state["width_mm"] * photo_state["px_per_mm"]))
@@ -200,10 +126,6 @@ def warp_photo_to_twin():
 
 
 def warp_photo_to_blueprint():
-    """Uploaded photo -> blueprint twin, or (None, None) if not ready.
-
-    The blueprint is drawn from the twin WITHOUT the green grid,
-    so the grid lines don't become blueprint edges."""
     if photo_state["image"] is None or photo_state["homography"] is None:
         return None, None
     w = int(round(photo_state["width_mm"] * photo_state["px_per_mm"]))
@@ -213,8 +135,6 @@ def warp_photo_to_blueprint():
     exclude = None
     if (photo_state["calibration_mode"] == "scale"
             and photo_state["ruler_twin"]):
-        # 20 mm each side of the ruler's centreline covers the
-        # ~30 mm wide ruler plus its shadow/edge
         half_w = int(round(20 * photo_state["px_per_mm"]))
         (x1, y1), (x2, y2) = photo_state["ruler_twin"]
         exclude = [((x1, y1), (x2, y2), half_w)]
@@ -226,19 +146,6 @@ def warp_photo_to_blueprint():
 
 
 def calibrate_with_scale(corners, ruler, ruler_mm):
-    """Big-object calibration, no A4 needed.
-
-    corners: 4 points TL TR BR BL around the object/area.
-    ruler: 2 points at the 0 and 30 cm marks of a scale lying flat
-    in the same plane as the object.
-    Returns (homography, out_w, out_h, px_per_mm, width_mm, height_mm).
-
-    The warp size comes from the corner distances in the photo.
-    The scale comes from the ruler AFTER the warp: warp the ruler
-    endpoints with the same homography, measure them in warped px,
-    divide by ruler_mm. That gives the true px/mm in the top-down
-    view, so object dimensions are in real mm.
-    """
     import math
     src = np.array(corners, dtype=np.float32)
     def dist(a, b):
@@ -263,7 +170,6 @@ def _set_photo_title(d):
 
 
 def warp_to_twin(frame):
-    """frame -> top-down twin, or the frame with a 'not calibrated' note."""
     if state["homography"] is None:
         out = frame.copy()
         cv2.putText(out, "NOT CALIBRATED", (20, 40),
@@ -274,18 +180,11 @@ def warp_to_twin(frame):
     w, h = twin_size()
     twin = cv2.warpPerspective(frame, state["homography"], (w, h))
     if state["show_grid"]:
-        # 100 mm grid — makes the twin readable as a plan, not a photo.
         twin = draw_grid(twin, state["px_per_mm"])
     return twin
 
 
-# ---------------------------------------------------------------- camera
 class Camera:
-    """Background thread: always holds the newest frame, drops old ones.
-
-    Without this, Flask would block on cap.read() and the two windows
-    would lag each other. With it, both streams read the same frame.
-    """
 
     def __init__(self, index=0):
         self.cap = cv2.VideoCapture(index)
@@ -320,7 +219,7 @@ class Camera:
         self.cap.release()
 
 
-camera = None  # created in main(), after args are parsed
+camera = None
 
 
 def encode_jpeg(frame, quality=70):
@@ -329,12 +228,9 @@ def encode_jpeg(frame, quality=70):
 
 
 def mjpeg_stream(make_frame):
-    """Yield a multipart MJPEG stream. `make_frame` turns a raw frame
-    into whatever this window should show (raw, or warped twin)."""
     while True:
         frame = camera.get_frame() if camera else None
         if frame is None:
-            # No camera yet: a black frame with a message, not a crash.
             frame = np.zeros((480, 640, 3), dtype=np.uint8)
             cv2.putText(frame, "Waiting for camera...",
                         (150, 240), cv2.FONT_HERSHEY_SIMPLEX,
@@ -344,10 +240,9 @@ def mjpeg_stream(make_frame):
         if data is None:
             continue
         yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + data + b"\r\n")
-        time.sleep(0.03)  # ~30 fps cap; the warp is the real limit
+        time.sleep(0.03)
 
 
-# ---------------------------------------------------------------- routes
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -367,7 +262,6 @@ def twin_feed():
 
 @app.route("/snapshot.jpg")
 def snapshot():
-    """One still JPEG of the raw feed — the image you click corners on."""
     frame = camera.get_frame() if camera else None
     if frame is None:
         return jsonify({"error": "no camera frame yet"}), 503
@@ -376,12 +270,6 @@ def snapshot():
 
 @app.route("/snapshot_twin.png")
 def snapshot_twin():
-    """Download the current twin as a sharper PNG.
-
-    The live twin runs at 2 px/mm for speed; this upscales it 2.5x
-    (the equivalent of 5 px/mm) for a crisp still. For a true
-    5 px/mm still from a photo, use photo_to_2d.py instead.
-    """
     frame = camera.get_frame() if camera else None
     if frame is None or state["homography"] is None:
         return jsonify({"error": "not calibrated yet"}), 400
@@ -397,8 +285,6 @@ def snapshot_twin():
 
 
 def _objects_message(info):
-    """One line listing every measured object, for the status msg,
-    in the blueprint's current unit."""
     unit = info.get("unit", "mm")
     objs = info.get("objects") or []
     if len(objs) > 1:
@@ -409,11 +295,8 @@ def _objects_message(info):
             f"{format_len(info['object_h_mm'], unit)}. ")
 
 
-# ---------------------------------------------------------------- photo routes
 @app.route("/upload_photo", methods=["POST"])
 def upload_photo():
-    """Upload one photo (form field 'photo'). Kept in memory only,
-    never written to disk. Returns its pixel size."""
     if "photo" not in request.files:
         return jsonify({"error": "no file — form field must be named 'photo'"}), 400
     f = request.files["photo"]
@@ -423,7 +306,6 @@ def upload_photo():
     img = cv2.imdecode(data, cv2.IMREAD_COLOR)
     if img is None:
         return jsonify({"error": "could not decode that file as an image"}), 400
-    # Cap huge phone photos so the warp stays fast in the browser.
     h, w = img.shape[:2]
     if max(h, w) > 2000:
         scale = 2000 / max(h, w)
@@ -431,7 +313,7 @@ def upload_photo():
                          interpolation=cv2.INTER_AREA)
     photo_state["image"] = img
     photo_state["filename"] = f.filename
-    photo_state["homography"] = None  # new photo, needs new corners
+    photo_state["homography"] = None
     photo_state["ruler_twin"] = None
     return jsonify({"ok": True, "filename": f.filename,
                     "width_px": int(img.shape[1]), "height_px": int(img.shape[0]),
@@ -491,10 +373,6 @@ def photo_blueprint_png():
 
 @app.route("/photo_blueprint.pdf")
 def photo_blueprint_pdf():
-    """True-scale PDF: prints 1:1, so the object outline on paper
-    measures the same as the real object. Page size is the full
-    sheet (242 x 333 mm at 5 px/mm on A4) — print on A3, or tile
-    it with the printer's poster mode on A4."""
     sheet, info = warp_photo_to_blueprint()
     if sheet is None:
         return jsonify({"error": "upload a photo and calibrate it first"}), 400
@@ -506,7 +384,6 @@ def photo_blueprint_pdf():
 
 @app.route("/photo_blueprint.json")
 def photo_blueprint_json():
-    """The blueprint's measured dimensions, in mm."""
     _sheet, info = warp_photo_to_blueprint()
     if info is None:
         return jsonify({"error": "upload a photo and calibrate it first"}), 400
@@ -515,9 +392,6 @@ def photo_blueprint_json():
 
 @app.route("/twin_blueprint_feed")
 def twin_blueprint_feed():
-    """Live blueprint stream: warp each frame, then redraw it as a
-    blueprint. Slower than the raw twin (edge detection per frame),
-    so it runs at the same 2 px/mm as the live twin."""
     def make_blueprint_frame(frame):
         twin = warp_to_twin(frame)
         if state["homography"] is None:
@@ -532,9 +406,6 @@ def twin_blueprint_feed():
 
 @app.route("/photo_calibrate", methods=["POST"])
 def photo_calibrate():
-    """Body: {"points": [[x,y]x4 TL,TR,BR,BL], "width_mm": 210,
-              "height_mm": 297} — points are in uploaded-photo pixels.
-    Warps at 5 px/mm, like photo_to_2d.py."""
     if photo_state["image"] is None:
         return jsonify({"error": "upload a photo first"}), 400
     d = request.get_json(force=True)
@@ -546,7 +417,7 @@ def photo_calibrate():
     px_per_mm = float(d.get("px_per_mm", PHOTO_PX_PER_MM))
     _set_photo_title(d)
     photo_state["calibration_mode"] = "a4"
-    photo_state["ruler_twin"] = None  # no ruler in A4 mode
+    photo_state["ruler_twin"] = None
     h, out_w, out_h = compute_homography(points, width_mm, height_mm, px_per_mm)
     photo_state["homography"] = h
     photo_state["width_mm"] = width_mm
@@ -565,13 +436,6 @@ def photo_calibrate():
 
 @app.route("/photo_autodetect", methods=["POST"])
 def photo_autodetect():
-    """Find the reference/object corners in the uploaded photo, no
-    clicking. Body: {"mode": "a4"|"scale"}.
-    a4: largest quad = the A4 sheet. scale: largest quad = the
-    object, plus a long thin quad = the ruler (if found).
-    Points come back in photo pixels, TL/TR/BR/BL, sub-pixel
-    refined. Returns ok False when nothing clean is found — the
-    UI then falls back to clicking."""
     if photo_state["image"] is None:
         return jsonify({"error": "upload a photo first"}), 400
     d = request.get_json(silent=True) or {}
@@ -599,7 +463,6 @@ def photo_autodetect():
 
 @app.route("/photo_aruco", methods=["POST"])
 def photo_aruco():
-    """Auto-calibrate the uploaded photo from ArUco ids 0-3."""
     if photo_state["image"] is None:
         return jsonify({"error": "upload a photo first"}), 400
     d = request.get_json(silent=True) or {}
@@ -612,7 +475,7 @@ def photo_aruco():
         return jsonify({"error": f"need ArUco ids 0-3 in the photo, found {found}"}), 400
     h, out_w, out_h = compute_homography(points, width_mm, height_mm, px_per_mm)
     photo_state["calibration_mode"] = "a4"
-    photo_state["ruler_twin"] = None  # no ruler in A4 mode
+    photo_state["ruler_twin"] = None
     photo_state["homography"] = h
     photo_state["width_mm"] = width_mm
     photo_state["height_mm"] = height_mm
@@ -623,9 +486,6 @@ def photo_aruco():
 
 @app.route("/photo_calibrate_scale", methods=["POST"])
 def photo_calibrate_scale():
-    """Big-object calibration with a 30 cm scale.
-    Body: {"corners": [[x,y]x4 TL,TR,BR,BL], "ruler": [[x,y]x2],
-           "ruler_mm": 300, "title": "SUBMARINE"}"""
     if photo_state["image"] is None:
         return jsonify({"error": "upload a photo first"}), 400
     d = request.get_json(force=True)
@@ -665,10 +525,6 @@ def photo_calibrate_scale():
 
 @app.route("/photo_preview", methods=["POST"])
 def photo_preview():
-    """Warp preview from the points as clicked, without saving
-    anything. Lets the user check the selection is good before
-    hitting Apply. Body is the same as /photo_calibrate or
-    /photo_calibrate_scale, plus "mode": "a4" or "scale"."""
     if photo_state["image"] is None:
         return jsonify({"error": "upload a photo first"}), 400
     d = request.get_json(force=True)
@@ -691,7 +547,6 @@ def photo_preview():
                 float(d.get("px_per_mm", PHOTO_PX_PER_MM)))
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
-    # Cap preview size so it stays fast.
     preview = cv2.warpPerspective(photo_state["image"], h, (out_w, out_h))
     if max(out_w, out_h) > 1200:
         scale = 1200 / max(out_w, out_h)
@@ -726,8 +581,6 @@ def status():
 
 @app.route("/calibrate", methods=["POST"])
 def calibrate():
-    """Body: {"points": [[x,y]x4 TL,TR,BR,BL], "width_mm": 210,
-              "height_mm": 297, "px_per_mm": 2}"""
     d = request.get_json(force=True)
     points = d.get("points")
     if not points or len(points) != 4:
@@ -748,9 +601,6 @@ def calibrate():
 
 @app.route("/calibrate_aruco", methods=["POST"])
 def calibrate_aruco():
-    """Auto-calibrate from 4 printed ArUco markers (ids 0-3 = TL,TR,BR,BL)
-    placed at the corners of the area you want to twin. Same idea as
-    photo_to_2d.py --aruco, but on a live frame."""
     frame = camera.get_frame() if camera else None
     if frame is None:
         return jsonify({"error": "no camera frame yet"}), 503
@@ -790,7 +640,6 @@ def toggle_grid():
 
 @app.route("/set_unit", methods=["POST"])
 def set_unit():
-    """Dimension unit for the blueprint + messages: "mm", "cm" or "m"."""
     d = request.get_json(silent=True) or {}
     unit = d.get("unit", "mm")
     if unit not in ("mm", "cm", "m"):
@@ -799,7 +648,6 @@ def set_unit():
     return jsonify({"ok": True, "unit": unit})
 
 
-# ---------------------------------------------------------------- main
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Photo to 2D digital twin (Flask)")
     parser.add_argument("--camera", type=int, default=0, help="webcam index (default 0)")

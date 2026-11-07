@@ -14,11 +14,9 @@
   @keyframes pulse { 0% { box-shadow: 0 4px 20px rgba(124, 58, 237, .35); } 50% { box-shadow: 0 4px 28px rgba(124, 58, 237, .55); } 100% { box-shadow: 0 4px 20px rgba(124, 58, 237, .35); } }
   @keyframes swap { from { opacity: 0; transform: scale(.995); } to { opacity: 1; transform: scale(1); } }
 
-  /* top bar */
   header.top { display: flex; align-items: center; padding: 18px 28px 6px; animation: fade .35s ease both; }
   header.top h1 { font-size: 19px; margin: 0; font-weight: 650; letter-spacing: -.015em; }
 
-  /* stepper */
   .steps { display: flex; align-items: center; justify-content: center; gap: 0; padding: 14px 16px 20px; animation: fade .35s .05s ease both; }
   .step { display: inline-flex; align-items: center; gap: 9px; background: #14141f; border: 1px solid #262633; border-radius: 999px; padding: 9px 20px; font-size: 14px; font-weight: 550; color: #9a9aad; cursor: pointer; transition: background .25s ease, border-color .25s ease, color .25s ease, transform .12s ease; }
   .step:active { transform: scale(.98); }
@@ -30,8 +28,6 @@
   .step-line { width: 72px; height: 1px; background: #262633; flex: none; transition: background .2s ease; }
   .step-line.done { background: #6d28d9; }
 
-  /* action bar: the real buttons — the stepper is progress only */
-  /* cards */
   main { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; padding: 0 28px; width: 100%; flex: 1; }
   @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 720px) { main { grid-template-columns: 1fr; } header.top, main, .bottombar { padding-left: 14px; padding-right: 14px; } }
@@ -64,14 +60,12 @@
   .card .frame.measure { cursor: crosshair; }
   #measureMeta { color: #67e8f9; }
 
-  /* card menu */
   .menu-wrap { position: relative; }
   .menu { display: none; position: absolute; top: 34px; right: 0; z-index: 20; background: #1a1a28; border: 1px solid #2c2c3d; border-radius: 10px; min-width: 150px; padding: 5px; box-shadow: 0 12px 32px rgba(0,0,0,.5); animation: pop .18s ease both; }
   .menu.open { display: block; }
   .menu a { display: block; padding: 8px 11px; font-size: 13px; color: #d5d5de; text-decoration: none; border-radius: 7px; }
   .menu a:hover { background: #262637; color: #fff; }
 
-  /* bottom bar */
   .bottombar { display: flex; align-items: center; gap: 12px; padding: 16px 28px 22px; animation: fade .35s .1s ease both; }
   .file-chip { display: inline-flex; align-items: center; gap: 9px; background: #12121c; border: 1px solid #232332; border-radius: 999px; padding: 9px 16px; font-size: 13px; color: #c6c6d2; max-width: 60%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .file-chip svg { width: 16px; height: 16px; color: #8b8b99; flex: none; }
@@ -84,7 +78,6 @@
   .btn:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
   .btn svg { width: 15px; height: 15px; }
 
-  /* calibrate panel */
   #calib { display: none; margin: 0 28px 18px; background: #12121c; border: 1px solid #232332; border-radius: 18px; padding: 20px 22px; animation: pop .25s ease both; }
   #calib h3 { margin: 0 0 14px; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
   #calib p { margin: 10px 0; font-size: 13px; color: #a1a1af; }
@@ -111,14 +104,12 @@
   .btn-row button.primary { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; }
   #msg { padding: 0 28px 18px; color: #a7f3d0; min-height: 1.2em; font-size: 13px; }
 
-  /* lightbox */
   #lightbox { display: none; position: fixed; inset: 0; background: rgba(5,5,10,.95); z-index: 100; padding: 28px; box-sizing: border-box; overflow: auto; }
   #lightbox.open { display: block; animation: fade .2s ease both; }
   #lightbox .lb-inner { max-width: 1400px; margin: 0 auto; background: #000; border: 1px solid #2c2c3d; border-radius: 16px; overflow: hidden; animation: pop .25s ease both; }
   #lightbox .lb-inner img { width: 100%; display: block; }
   #lbClose { position: fixed; top: 14px; right: 18px; z-index: 101; }
-  #lbTitle { color: #ececf1; text-align: center; padding: 10px; font-size: 13px; }
-</style>
+  #lbTitle { color: #ececf1; text-align: center; padding: 10px; font-size: 13px; }</style>
 </head>
 <body>
 <header class="top">
@@ -240,7 +231,6 @@ let downPos = null;
 function showMsg(t) { document.getElementById('msg').textContent = t; }
 
 function setSteps(state) {
-  // state: 1 = nothing yet, 2 = uploaded, 3 = calibrated
   const steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
   const lines = [document.getElementById('line1'), document.getElementById('line2')];
   steps.forEach((el, i) => {
@@ -284,7 +274,6 @@ async function refreshStatus() {
 }
 refreshStatus(); setInterval(refreshStatus, 3000);
 
-// ---------- lightbox ----------
 function openLightbox(kind) {
   const lb = document.getElementById('lightbox'), inner = document.getElementById('lbInner');
   const title = document.getElementById('lbTitle');
@@ -305,7 +294,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Backspace' && document.getElementById('calib').style.display === 'block') { e.preventDefault(); undoPhotoClick(); }
 });
 
-// ---------- photo mode ----------
 async function uploadPhoto() {
   const f = document.getElementById('photoFile').files[0];
   if (!f) return;
@@ -331,13 +319,10 @@ async function uploadPhoto() {
     document.getElementById('fileName').textContent = j.filename;
     clearMeasurements();
     refreshStatus();
-    // next step pops up on its own: detect the corners, then
-    // Calibrate opens with the points already placed
     setTimeout(autoDetect, 400);
   }
 }
 
-// ---------- selection: points, drag, preview ----------
 function canvasPos(e) {
   const c = document.getElementById('photoCanvas'), r = c.getBoundingClientRect();
   return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)];
@@ -450,17 +435,12 @@ async function previewPhotoCalib() {
   showMsg('Preview ready. If it looks right, Generate.');
 }
 
-// ---------- measure on the twin ----------
-// Click two points on the twin -> distance in real mm, drawn
-// as a line with a label. The twin is top-down at a known
-// px/mm, so distance_px / px_per_mm = mm. Several measurements
-// can stack; Clear removes them all.
 let measureMode = false;
-let measurements = [];   // {x1,y1,x2,y2,mm} in twin px
-let pendingPoint = null; // [x,y] twin px, first click of a pair
-let measureHover = null; // [x,y] twin px, rubber-band preview
-let twinPxPerMm = null;  // set in showResults
-let twinSizePx = null;   // [w,h] set in showResults
+let measurements = [];
+let pendingPoint = null;
+let measureHover = null;
+let twinPxPerMm = null;
+let twinSizePx = null;
 
 function twinFrameClick(e) {
   if (measureMode) { measureClick(e); return; }
@@ -483,8 +463,6 @@ function clearMeasurements() {
   renderMeasurements();
 }
 function twinPointFromEvent(e) {
-  // click -> twin px, accounting for object-fit:contain
-  // letterboxing (the displayed image may not fill the frame)
   const img = document.getElementById('photoTwinImg');
   const r = img.getBoundingClientRect();
   const nw = img.naturalWidth, nh = img.naturalHeight;
@@ -549,9 +527,8 @@ document.getElementById('twinFrame').addEventListener('mousemove', (e) => {
 });
 window.addEventListener('resize', () => { if (measureMode || measurements.length) renderMeasurements(); });
 
-// ---------- dimension units (mm / cm / m) ----------
 let currentUnit = 'mm';
-let lastResults = null;  // last calibrate response, for re-rendering sizes
+let lastResults = null;
 function fmtLen(mm, unit) {
   if (unit === 'cm') return (mm / 10).toFixed(1) + ' cm';
   if (unit === 'm') return (mm / 1000).toFixed(2) + ' m';
@@ -647,7 +624,6 @@ async function toggleGrid() {
   } catch (e) { chk.checked = !v; }
   const img = document.getElementById('photoTwinImg');
   if (img.naturalWidth) img.src = '/photo_twin.jpg?t=' + Date.now();
-}
-</script>
+}</script>
 </body>
 </html>
