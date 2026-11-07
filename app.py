@@ -64,7 +64,7 @@ import cv2
 import numpy as np
 from flask import Flask, Response, jsonify, render_template, request, send_file
 
-from blueprint import blueprint_pdf_bytes, make_blueprint
+from blueprint import blueprint_pdf_bytes, format_len, make_blueprint
 from detect import detect_quad, detect_ruler
 
 app = Flask(__name__)
@@ -149,6 +149,12 @@ photo_state = {
     # Blank here means the blueprint falls back to "OBJECT".
     "title": "OBJECT",
     "calibration_mode": "a4",  # "a4" or "scale"
+    # ruler ends in twin px (scale mode only): the blueprint
+    # blanks this band from object detection, so the reference
+    # scale is never measured as an object of its own.
+    "ruler_twin": None,
+    # dimension unit for the blueprint + messages: "mm", "cm" or "m"
+    "unit": "mm",
 }
 
 
@@ -204,9 +210,18 @@ def warp_photo_to_blueprint():
     h = int(round(photo_state["height_mm"] * photo_state["px_per_mm"]))
     twin = cv2.warpPerspective(photo_state["image"],
                                photo_state["homography"], (w, h))
+    exclude = None
+    if (photo_state["calibration_mode"] == "scale"
+            and photo_state["ruler_twin"]):
+        # 20 mm each side of the ruler's centreline covers the
+        # ~30 mm wide ruler plus its shadow/edge
+        half_w = int(round(20 * photo_state["px_per_mm"]))
+        (x1, y1), (x2, y2) = photo_state["ruler_twin"]
+        exclude = [((x1, y1), (x2, y2), half_w)]
     sheet, info = make_blueprint(
         twin, photo_state["width_mm"], photo_state["height_mm"],
-        photo_state["px_per_mm"], title=photo_state["title"])
+        photo_state["px_per_mm"], title=photo_state["title"],
+        exclude=exclude, unit=photo_state["unit"])
     return sheet, info
 
 
@@ -382,13 +397,16 @@ def snapshot_twin():
 
 
 def _objects_message(info):
-    """One line listing every measured object, for the status msg."""
+    """One line listing every measured object, for the status msg,
+    in the blueprint's current unit."""
+    unit = info.get("unit", "mm")
     objs = info.get("objects") or []
     if len(objs) > 1:
-        parts = ", ".join(f"{o['w_mm']} x {o['h_mm']} mm" for o in objs)
+        parts = ", ".join(f"{format_len(o['w_mm'], unit)} x "
+                          f"{format_len(o['h_mm'], unit)}" for o in objs)
         return f"Objects ({len(objs)}): {parts}. "
-    return (f"Object: {info['object_w_mm']} x "
-            f"{info['object_h_mm']} mm. ")
+    return (f"Object: {format_len(info['object_w_mm'], unit)} x "
+            f"{format_len(info['object_h_mm'], unit)}. ")
 
 
 # ---------------------------------------------------------------- photo routes
@@ -414,6 +432,7 @@ def upload_photo():
     photo_state["image"] = img
     photo_state["filename"] = f.filename
     photo_state["homography"] = None  # new photo, needs new corners
+    photo_state["ruler_twin"] = None
     return jsonify({"ok": True, "filename": f.filename,
                     "width_px": int(img.shape[1]), "height_px": int(img.shape[0]),
                     "message": f"Uploaded {f.filename} ({img.shape[1]}x{img.shape[0]}). "
@@ -527,6 +546,7 @@ def photo_calibrate():
     px_per_mm = float(d.get("px_per_mm", PHOTO_PX_PER_MM))
     _set_photo_title(d)
     photo_state["calibration_mode"] = "a4"
+    photo_state["ruler_twin"] = None  # no ruler in A4 mode
     h, out_w, out_h = compute_homography(points, width_mm, height_mm, px_per_mm)
     photo_state["homography"] = h
     photo_state["width_mm"] = width_mm
@@ -591,6 +611,8 @@ def photo_aruco():
     if points is None:
         return jsonify({"error": f"need ArUco ids 0-3 in the photo, found {found}"}), 400
     h, out_w, out_h = compute_homography(points, width_mm, height_mm, px_per_mm)
+    photo_state["calibration_mode"] = "a4"
+    photo_state["ruler_twin"] = None  # no ruler in A4 mode
     photo_state["homography"] = h
     photo_state["width_mm"] = width_mm
     photo_state["height_mm"] = height_mm
@@ -625,6 +647,9 @@ def photo_calibrate_scale():
     photo_state["height_mm"] = height_mm
     photo_state["px_per_mm"] = px_per_mm
     photo_state["calibration_mode"] = "scale"
+    ruler_pts = np.array(ruler, dtype=np.float32).reshape(-1, 1, 2)
+    photo_state["ruler_twin"] = cv2.perspectiveTransform(
+        ruler_pts, h).reshape(-1, 2).tolist()
     _sheet, info = warp_photo_to_blueprint()
     obj_txt = _objects_message(info)
     return jsonify({"ok": True, "twin_px": [out_w, out_h],
@@ -758,9 +783,20 @@ def reset():
 
 @app.route("/toggle_grid", methods=["POST"])
 def toggle_grid():
-    state["show_grid"] = bool(request.get_json(silent=True) or {}).get(
-        "show_grid", not state["show_grid"])
+    d = request.get_json(silent=True) or {}
+    state["show_grid"] = bool(d.get("show_grid", not state["show_grid"]))
     return jsonify({"ok": True, "show_grid": state["show_grid"]})
+
+
+@app.route("/set_unit", methods=["POST"])
+def set_unit():
+    """Dimension unit for the blueprint + messages: "mm", "cm" or "m"."""
+    d = request.get_json(silent=True) or {}
+    unit = d.get("unit", "mm")
+    if unit not in ("mm", "cm", "m"):
+        return jsonify({"error": "unit must be mm, cm or m"}), 400
+    photo_state["unit"] = unit
+    return jsonify({"ok": True, "unit": unit})
 
 
 # ---------------------------------------------------------------- main

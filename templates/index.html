@@ -171,7 +171,11 @@
       <img id="photoBlueprintImg" src="" alt="" style="display:none">
       <span class="empty" id="blueprintEmpty">Calibrate to generate the blueprint</span>
     </div></div>
-    <footer id="blueprintMeta"></footer>
+    <footer><span id="blueprintMeta"></span><span class="spacer"></span><span class="seg" id="unitSeg">
+      <label><input type="radio" name="unit" value="mm" checked onchange="setUnit('mm')">mm</label>
+      <label><input type="radio" name="unit" value="cm" onchange="setUnit('cm')">cm</label>
+      <label><input type="radio" name="unit" value="m" onchange="setUnit('m')">m</label>
+    </span></footer>
   </section>
 </main>
 
@@ -501,7 +505,7 @@ function measureClick(e) {
   measurements.push({ x1: pendingPoint[0], y1: pendingPoint[1], x2: p[0], y2: p[1], mm });
   pendingPoint = null; measureHover = null;
   document.getElementById('measureClearBtn').style.display = '';
-  document.getElementById('measureMeta').textContent = `${measurements.length} measurement${measurements.length > 1 ? 's' : ''} · last ${mm.toFixed(1)} mm`;
+  document.getElementById('measureMeta').textContent = `${measurements.length} measurement${measurements.length > 1 ? 's' : ''} · last ${fmtLen(mm, currentUnit)}`;
   renderMeasurements();
 }
 function renderMeasurements() {
@@ -523,7 +527,7 @@ function renderMeasurements() {
     const mx = (m.x1 + m.x2) / 2, my = (m.y1 + m.y2) / 2;
     return `<line x1="${X(m.x1)}" y1="${Y(m.y1)}" x2="${X(m.x2)}" y2="${Y(m.y2)}" stroke="#22d3ee" stroke-width="2" ${dashed ? 'stroke-dasharray="6 4"' : ''}/>`
       + `<circle cx="${X(m.x1)}" cy="${Y(m.y1)}" r="4" fill="#22d3ee"/><circle cx="${X(m.x2)}" cy="${Y(m.y2)}" r="4" fill="#22d3ee"/>`
-      + `<text x="${X(mx)}" y="${(offY + my * scale - 8).toFixed(1)}" fill="#22d3ee" font-size="13" font-weight="600" text-anchor="middle" style="paint-order:stroke" stroke="#0a0a12" stroke-width="4">${m.mm.toFixed(1)} mm</text>`;
+      + `<text x="${X(mx)}" y="${(offY + my * scale - 8).toFixed(1)}" fill="#22d3ee" font-size="13" font-weight="600" text-anchor="middle" style="paint-order:stroke" stroke="#0a0a12" stroke-width="4">${fmtLen(m.mm, currentUnit)}</text>`;
   };
   let s = '';
   measurements.forEach(m => { s += line(m, false); });
@@ -545,9 +549,40 @@ document.getElementById('twinFrame').addEventListener('mousemove', (e) => {
 });
 window.addEventListener('resize', () => { if (measureMode || measurements.length) renderMeasurements(); });
 
+// ---------- dimension units (mm / cm / m) ----------
+let currentUnit = 'mm';
+let lastResults = null;  // last calibrate response, for re-rendering sizes
+function fmtLen(mm, unit) {
+  if (unit === 'cm') return (mm / 10).toFixed(1) + ' cm';
+  if (unit === 'm') return (mm / 1000).toFixed(2) + ' m';
+  return Math.round(mm) + ' mm';
+}
+function renderSizes() {
+  if (!lastResults) return;
+  const bpi = lastResults.blueprint;
+  document.getElementById('twinMeta').textContent =
+    `${lastResults.twin_px[0]}×${lastResults.twin_px[1]} px · ${fmtLen(bpi.ref_w_mm, currentUnit)} × ${fmtLen(bpi.ref_h_mm, currentUnit)}`;
+  document.getElementById('blueprintMeta').textContent = bpi.objects && bpi.objects.length > 1
+    ? `${bpi.objects.length} objects: ` + bpi.objects.map(o => `${fmtLen(o.w_mm, currentUnit)} × ${fmtLen(o.h_mm, currentUnit)}`).join(', ')
+    : `Object ${fmtLen(bpi.object_w_mm, currentUnit)} × ${fmtLen(bpi.object_h_mm, currentUnit)}`;
+  if (measurements.length)
+    document.getElementById('measureMeta').textContent =
+      `${measurements.length} measurement${measurements.length > 1 ? 's' : ''} · last ${fmtLen(measurements[measurements.length - 1].mm, currentUnit)}`;
+}
+async function setUnit(u) {
+  if (!['mm', 'cm', 'm'].includes(u)) return;
+  currentUnit = u;
+  await fetch('/set_unit', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ unit: u }) });
+  const bp = document.getElementById('photoBlueprintImg');
+  if (bp.naturalWidth) bp.src = '/photo_blueprint.jpg?t=' + Date.now();
+  renderSizes();
+  renderMeasurements();
+}
+
 function showResults(j) {
   twinPxPerMm = j.blueprint.px_per_mm;
   twinSizePx = j.twin_px;
+  lastResults = j;
   clearMeasurements();
   const t = Date.now();
   const twin = document.getElementById('photoTwinImg');
@@ -559,11 +594,7 @@ function showResults(j) {
   bp.style.display = '';
   document.getElementById('twinEmpty').style.display = 'none';
   document.getElementById('blueprintEmpty').style.display = 'none';
-  document.getElementById('twinMeta').textContent = `${j.twin_px[0]}×${j.twin_px[1]} px · ${j.blueprint.ref_w_mm}×${j.blueprint.ref_h_mm} mm`;
-  const bpi = j.blueprint;
-  document.getElementById('blueprintMeta').textContent = bpi.objects && bpi.objects.length > 1
-    ? `${bpi.objects.length} objects: ` + bpi.objects.map(o => `${o.w_mm} × ${o.h_mm} mm`).join(', ')
-    : `Object ${bpi.object_w_mm} × ${bpi.object_h_mm} mm`;
+  renderSizes();
 }
 
 async function applyPhotoCalib() {
@@ -607,10 +638,15 @@ async function autoPhotoAruco() {
 }
 
 async function toggleGrid() {
-  const v = document.getElementById('gridChk').checked;
-  await fetch('/toggle_grid', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ show_grid: v }) });
+  const chk = document.getElementById('gridChk');
+  const v = chk.checked;
+  try {
+    const r = await fetch('/toggle_grid', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ show_grid: v }) });
+    const j = await r.json();
+    chk.checked = !!j.show_grid;
+  } catch (e) { chk.checked = !v; }
   const img = document.getElementById('photoTwinImg');
-  if (img.src) img.src = '/photo_twin.jpg?t=' + Date.now();
+  if (img.naturalWidth) img.src = '/photo_twin.jpg?t=' + Date.now();
 }
 </script>
 </body>

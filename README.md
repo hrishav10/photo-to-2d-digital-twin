@@ -107,6 +107,18 @@ divided by the calibration's px/mm — the same scale the
 blueprint uses, so the numbers agree. Starting a new
 photo or twin clears the old measurements.
 
+## Dimensions in mm, cm or m
+
+The Blueprint card's footer has a mm / cm / m switch. It
+changes every dimension at once: the dimension lines on the
+blueprint itself, the REF and grid spacing in the title block,
+the sizes in the card footers, and the Measure tool's labels.
+mm stays whole (82 mm), cm gets one decimal (8.2 cm), m gets
+two (0.08 m). The 1:1 PDF follows the same unit, and the
+scale (px/mm) never changes — it's the calibration, not a
+measurement. The Twin card's Grid checkbox turns the green
+100 mm grid on the twin on and off.
+
 ## Every object gets measured, not just the biggest
 
 The blueprint finds *all* objects on the sheet
@@ -181,14 +193,49 @@ so the curve comes along for free and appears correctly in
 the twin and the blueprint.
 
 For a guitar lying flat on the floor, use the 30 cm scale
-mode: click the four corners of a rectangle on the floor
-that encloses the guitar (top of the headstock, both sides
-of the body), then the two ends of the scale lying flat
-beside it. The blueprint then measures the guitar's
-bounding box — its full length and the body's width — and
-its outline is traced from the largest contour in the twin.
-Keep the guitar flat on the floor; anything sticking up
-will look stretched.
+mode:
+
+1. Lay the guitar flat on its back, and the 30 cm ruler
+   flat beside it, in the same plane as the guitar — not
+   propped up, not under it. The ruler must be fully in
+   frame.
+2. Take the photo from directly above — phone as overhead
+   as you can hold it. Tilt is the #1 accuracy killer in
+   scale mode (it stretches one direction).
+3. Upload, pick **30 cm scale**, and click the four corners
+   of an imaginary rectangle on the floor around the guitar:
+   top of the headstock, both sides of the body. You are
+   clicking the floor, not the guitar — never trace the
+   curves. (Auto-detect can't find corners on a curved
+   object; there is no quadrilateral to find, so click them.)
+4. Click the ruler's two ends — the 0 cm mark, then the
+   30 cm mark. Auto-detect finds the ruler on its own if
+   you'd rather not click it.
+5. Generate. The blueprint measures the guitar's bounding
+   box — its full length (headstock to body bottom) and the
+   body's width. The ruler itself is never measured as an
+   object; it only sets the scale.
+
+Photo tips that decide whether the numbers are right:
+
+- **Even light, no strong shadows.** The outline is found
+  from darkness, and a shadow is as dark as the guitar — a
+  dark patch of floor touching the guitar merges with it
+  and inflates the box (on one real photo the body width
+  read 592 mm instead of ~390, because the shaded floor
+  on both sides merged with the body). Diffuse daylight
+  or a light sheet under the guitar fixes it.
+- **A plain, light background helps** more than anything:
+  on a white sheet the guitar is one clean contour; on
+  bare concrete the floor's stains can read as objects
+  (the detector now drops the floor itself and soft-edged
+  stains, but a clean background is still better).
+- **The Measure tool is the check:** if a blueprint size
+  looks off, turn Measure on and click across the body
+  on the twin — that reads the true width straight from
+  the calibrated scale, no detection involved.
+- Keep the guitar flat on the floor; anything sticking up
+  will look stretched.
 
 ## Run it
 
