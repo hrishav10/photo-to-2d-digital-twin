@@ -29,7 +29,11 @@ has an expand button and a menu (Download / Expand). The
 bottom bar shows the file name and the Export buttons
 (PNG for the twin, Blueprint for the drawing). Click any
 card image to open it big. Close with X, Esc, or clicking
-outside.
+outside. The Blueprint card's menu also has **Download blueprint
+PDF (prints 1:1)** — a PDF that prints at true scale, so you can
+hold the printed outline against the real object to check it fits.
+The page is the full sheet (242 × 333 mm at 5 px/mm on A4), so
+print it on A3, or tile it with the printer's poster mode on A4.
 
 The dimensions are real: the object's width/height are measured
 from its outline in the twin, using the homography scale
@@ -203,6 +207,8 @@ python3 photo_to_2d.py room.jpg
 # click 4 corners, output: twin_topdown.png
 python3 photo_to_2d.py room.jpg --corners 120,80 900,110 880,700 140,660 --svg plan.svg
 python3 photo_to_2d.py calculator.jpg --corners 120,80 900,110 880,700 140,660 --blueprint calculator_blueprint.png --title CALCULATOR
+python3 photo_to_2d.py calculator.jpg --corners 120,80 900,110 880,700 140,660 --blueprint-pdf calculator_blueprint_1to1.pdf --title CALCULATOR
+# --blueprint-pdf writes the same sheet as a PDF that prints 1:1
 ```
 
 ## How it works

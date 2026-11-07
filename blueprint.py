@@ -21,9 +21,11 @@ Usage:
     # info = {"object_w_mm": ..., "object_h_mm": ..., "objects": [...]}
 """
 import datetime
+import io
 
 import cv2
 import numpy as np
+from PIL import Image
 
 # BGR colours (OpenCV is BGR, not RGB)
 BLUE_BG = (110, 46, 10)      # deep blueprint blue  #0A2E6E
@@ -226,6 +228,29 @@ def _dim_v(img, y0, y1, x, label, color=CYAN):
     th2, tw2 = txt.shape[:2]
     y = (y0 + y1 - th2) // 2
     img[max(0, y):y + th2, x - tw2 // 2:x - tw2 // 2 + tw2] = txt
+
+
+def blueprint_pdf_bytes(sheet, px_per_mm):
+    """Blueprint sheet (BGR) -> PDF bytes that print at true 1:1 scale.
+
+    The sheet is drawn at px_per_mm pixels per mm, so embedding it
+    at px_per_mm * 25.4 dpi makes 1 px = 1/px_per_mm mm on paper:
+    hold a printed object outline against the real object and they
+    match. The PDF page is the full sheet (twin + margins + title
+    block), so at 5 px/mm an A4 sheet comes out 242 x 333 mm — print
+    it on A3, or tile it with the printer's poster mode on A4.
+    No new dependency: Pillow ships the PDF writer."""
+    rgb = cv2.cvtColor(sheet, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(rgb)
+    buf = io.BytesIO()
+    img.save(buf, "PDF", resolution=float(px_per_mm) * 25.4)
+    return buf.getvalue()
+
+
+def save_blueprint_pdf(sheet, px_per_mm, path):
+    """Write a true-scale (1:1) PDF of the blueprint sheet to `path`."""
+    with open(path, "wb") as f:
+        f.write(blueprint_pdf_bytes(sheet, px_per_mm))
 
 
 def make_blueprint(twin, width_mm, height_mm, px_per_mm,

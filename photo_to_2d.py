@@ -37,7 +37,7 @@ import sys
 import cv2
 import numpy as np
 
-from blueprint import make_blueprint
+from blueprint import make_blueprint, save_blueprint_pdf
 
 
 def parse_args():
@@ -59,6 +59,9 @@ def parse_args():
                    help="also write an SVG outline in mm units")
     p.add_argument("--blueprint", default=None, metavar="OUT.PNG",
                    help="also write a game-style blueprint sheet (blue, dimensioned)")
+    p.add_argument("--blueprint-pdf", default=None, metavar="OUT.PDF",
+                   help="also write the blueprint sheet as a PDF that prints "
+                        "at true 1:1 scale (hold it against the real object)")
     p.add_argument("--title", default="OBJECT",
                    help="title on the blueprint sheet (default: OBJECT)")
     return p.parse_args()
@@ -159,12 +162,18 @@ def main():
           f"{args.px_per_mm:g} = distance_mm")
     if args.svg:
         write_svg(warped, args.svg, args.px_per_mm)
-    if args.blueprint:
+    if args.blueprint or args.blueprint_pdf:
         sheet, info = make_blueprint(warped, args.width_mm, args.height_mm,
                                      args.px_per_mm, title=args.title)
-        cv2.imwrite(args.blueprint, sheet)
-        print(f"Blueprint -> {args.blueprint} ({sheet.shape[1]}x{sheet.shape[0]} px, "
-              f"object {info['object_w_mm']} x {info['object_h_mm']} mm)")
+        if args.blueprint:
+            cv2.imwrite(args.blueprint, sheet)
+            print(f"Blueprint -> {args.blueprint} ({sheet.shape[1]}x{sheet.shape[0]} px, "
+                  f"object {info['object_w_mm']} x {info['object_h_mm']} mm)")
+        if args.blueprint_pdf:
+            save_blueprint_pdf(sheet, args.px_per_mm, args.blueprint_pdf)
+            print(f"Blueprint PDF (1:1 print) -> {args.blueprint_pdf} "
+                  f"({sheet.shape[1] / args.px_per_mm:.0f} x "
+                  f"{sheet.shape[0] / args.px_per_mm:.0f} mm sheet)")
 
 
 if __name__ == "__main__":

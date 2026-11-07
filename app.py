@@ -64,7 +64,7 @@ import cv2
 import numpy as np
 from flask import Flask, Response, jsonify, render_template, request, send_file
 
-from blueprint import make_blueprint
+from blueprint import blueprint_pdf_bytes, make_blueprint
 from detect import detect_quad, detect_ruler
 
 app = Flask(__name__)
@@ -468,6 +468,21 @@ def photo_blueprint_png():
     return Response(buf.tobytes(), mimetype="image/png",
                     headers={"Content-Disposition":
                              "attachment; filename=twin_blueprint.png"})
+
+
+@app.route("/photo_blueprint.pdf")
+def photo_blueprint_pdf():
+    """True-scale PDF: prints 1:1, so the object outline on paper
+    measures the same as the real object. Page size is the full
+    sheet (242 x 333 mm at 5 px/mm on A4) — print on A3, or tile
+    it with the printer's poster mode on A4."""
+    sheet, info = warp_photo_to_blueprint()
+    if sheet is None:
+        return jsonify({"error": "upload a photo and calibrate it first"}), 400
+    pdf = blueprint_pdf_bytes(sheet, info["px_per_mm"])
+    return Response(pdf, mimetype="application/pdf",
+                    headers={"Content-Disposition":
+                             "attachment; filename=twin_blueprint_1to1.pdf"})
 
 
 @app.route("/photo_blueprint.json")
