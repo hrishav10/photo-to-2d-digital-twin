@@ -8,7 +8,7 @@ from blueprint import make_blueprint, save_blueprint_pdf
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p = argparse.ArgumentParser(description="Photo to 2D digital twin")
     p.add_argument("photo", help="input photo (e.g. room.jpg)")
     p.add_argument("-o", "--output", default="twin_topdown.png",
                    help="output top-down image (default: twin_topdown.png)")
