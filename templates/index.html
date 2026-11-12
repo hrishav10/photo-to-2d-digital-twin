@@ -5,12 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Photo to 2D Digital Twin</title>
 <style>
-  /* ==========================================================
-     Photo to 2D Digital Twin — page styles
-     Dark theme. Purple (#7c3aed family) is the accent colour.
-     ========================================================== */
 
-  /* ---------- Page basics ---------- */
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; width: 100%; }
   body {
@@ -25,17 +20,12 @@
     flex-direction: column;
   }
 
-  /* ---------- Animations ---------- */
-  /* rise: cards slide up gently. fade: simple appear.
-     pop: small zoom-in. pulse: the glowing current step.
-     swap: an image that just changed fades in again. */
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   @keyframes pop { from { opacity: 0; transform: scale(.98); } to { opacity: 1; transform: scale(1); } }
   @keyframes pulse { 0% { box-shadow: 0 4px 20px rgba(124, 58, 237, .35); } 50% { box-shadow: 0 4px 28px rgba(124, 58, 237, .55); } 100% { box-shadow: 0 4px 20px rgba(124, 58, 237, .35); } }
   @keyframes swap { from { opacity: 0; transform: scale(.995); } to { opacity: 1; transform: scale(1); } }
 
-  /* ---------- Title bar ---------- */
   header.top {
     display: flex;
     align-items: center;
@@ -44,9 +34,6 @@
   }
   header.top h1 { font-size: 19px; margin: 0; font-weight: 650; letter-spacing: -.015em; }
 
-  /* ---------- Stepper: 1 Upload, 2 Calibrate, 3 Generate ---------- */
-  /* The current step is a purple pill (.active), steps already
-     finished are outlined (.done). Clicking a step jumps to it. */
   .steps {
     display: flex;
     align-items: center;
@@ -96,7 +83,6 @@
   .step-line { width: 72px; height: 1px; background: #262633; flex: none; transition: background .2s ease; }
   .step-line.done { background: #6d28d9; }
 
-  /* ---------- Layout: the three cards in a row ---------- */
   main {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -113,7 +99,6 @@
     header.top, main, .bottombar { padding-left: 14px; padding-right: 14px; }
   }
 
-  /* ---------- One card (Photo, Twin 01, Twin 02) ---------- */
   .card {
     background: #12121c;
     border: 1px solid #232332;
@@ -128,7 +113,6 @@
   .card:nth-child(3) { animation-delay: .12s; }
   .card:hover { border-color: #34344a; transform: translateY(-2px); }
 
-  /* Card header: the name, an expand button, a "..." menu button */
   .card header { display: flex; align-items: center; gap: 8px; padding: 16px 18px 12px; }
   .card header h2 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
   .card header .meta { font-size: 12px; color: #8b8b99; }
@@ -148,7 +132,6 @@
   .icon-btn:hover { background: #1e1e2c; color: #fff; }
   .icon-btn svg { width: 18px; height: 18px; display: block; }
 
-  /* Card body: the black frame that holds the image */
   .card .body { padding: 0 14px 14px; flex: 1; display: flex; }
   .card .frame {
     flex: 1;
@@ -164,7 +147,7 @@
   }
   .card .frame img { width: 100%; display: block; object-fit: contain; animation: fade .35s ease both; }
   .card .frame img.swap { animation: swap .45s ease both; }
-  /* The hint text shown while a card has no image yet */
+
   .card .frame .empty {
     position: absolute;
     inset: 0;
@@ -179,7 +162,6 @@
   }
   .card .frame .empty svg { width: 28px; height: 28px; color: #6d6d7d; }
 
-  /* Card footer: sizes and small controls under the image */
   .card footer {
     padding: 0 18px 14px;
     font-size: 12px;
@@ -194,7 +176,6 @@
   .card footer label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
   input[type="checkbox"] { accent-color: #7c3aed; }
 
-  /* Small pill buttons, e.g. Measure and Clear in the Twin 01 footer */
   .mini-btn {
     font: inherit;
     font-size: 12px;
@@ -210,15 +191,12 @@
   .mini-btn:hover { background: #1e1e2c; color: #fff; }
   .mini-btn.on { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; }
 
-  /* The measure tool draws its lines on this transparent SVG
-     layer, exactly on top of the twin image */
   #measureSvg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
   .card .frame.measure { cursor: crosshair; }
-  /* While a file is dragged over the Photo card */
+
   .card .frame.drag-over { outline: 2px dashed #8b5cf6; outline-offset: -2px; background: rgba(139, 92, 246, .08); }
   #measureMeta { color: #67e8f9; }
 
-  /* ---------- Card menus (the "..." dropdown) ---------- */
   .menu-wrap { position: relative; }
   .menu {
     display: none;
@@ -238,7 +216,6 @@
   .menu a { display: block; padding: 8px 11px; font-size: 13px; color: #d5d5de; text-decoration: none; border-radius: 7px; }
   .menu a:hover { background: #262637; color: #fff; }
 
-  /* ---------- Bottom bar: file name + export buttons ---------- */
   .bottombar {
     display: flex;
     align-items: center;
@@ -291,9 +268,6 @@
   .btn:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
   .btn svg { width: 15px; height: 15px; }
 
-  /* ---------- Calibrate panel ---------- */
-  /* Hidden until a photo is uploaded. The user checks the
-     corner points on the canvas here, then presses Generate. */
   #calib {
     display: none;
     margin: 0 28px 18px;
@@ -307,8 +281,6 @@
   #calib p { margin: 10px 0; font-size: 13px; color: #a1a1af; }
   #calib label { font-size: 13px; color: #a1a1af; }
 
-  /* Segmented control: a row of options where one is selected
-     (used for A4 / 30 cm scale, and for the mm / cm / m units) */
   .seg { display: inline-flex; border: 1px solid #2c2c3d; border-radius: 999px; overflow: hidden; }
   .seg label { padding: 8px 16px; font-size: 13px; color: #a1a1af; cursor: pointer; transition: background .15s ease, color .15s ease; }
   .seg label + label { border-left: 1px solid #2c2c3d; }
@@ -326,16 +298,13 @@
   }
   input[type="text"]::placeholder { color: #63636f; }
 
-  /* The canvas the user clicks the corner points on */
   .calib-wrap { position: relative; display: inline-block; max-width: 100%; margin-top: 12px; }
   canvas#photoCanvas { max-width: 100%; cursor: crosshair; border: 1px solid #2c2c3d; border-radius: 12px; display: block; background: #000; }
 
-  /* The small warped preview shown before applying */
   #previewBox { margin-top: 14px; max-width: 460px; }
   #previewBox img { width: 100%; display: block; border: 1px solid #2c2c3d; border-radius: 12px; animation: fade .3s ease both; }
   #previewBox p { font-size: 12px; color: #8b8b99; margin: 6px 0 0; }
 
-  /* The list of placed points, shown as small chips */
   .point-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
   .point-chip {
     font-size: 12px;
@@ -349,7 +318,6 @@
   }
   .point-chip.ruler { border-color: #0e7490; color: #67e8f9; }
 
-  /* The button row under the canvas */
   .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
   .btn-row button {
     font: inherit;
@@ -367,10 +335,8 @@
   .btn-row button:active { transform: scale(.98); }
   .btn-row button.primary { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border-color: transparent; color: #fff; }
 
-  /* The status message line under the panel */
   #msg { padding: 0 28px 18px; color: #a7f3d0; min-height: 1.2em; font-size: 13px; }
 
-  /* ---------- Full-screen view (lightbox) ---------- */
   #lightbox {
     display: none;
     position: fixed;
@@ -398,12 +364,10 @@
 </head>
 <body>
 
-<!-- Title bar -->
 <header class="top">
   <h1>Photo to 2D Digital Twin</h1>
 </header>
 
-<!-- The 3 steps. Clicking a step jumps straight to that stage. -->
 <div class="steps">
   <button class="step active" id="step1" onclick="stepAction(1)"><span class="n">1</span>Upload</button>
   <span class="step-line" id="line1"></span>
@@ -412,25 +376,17 @@
   <button class="step" id="step3" onclick="stepAction(3)"><span class="n">3</span>Generate</button>
 </div>
 
-<!-- Hidden file picker. The Upload step and the Photo card
-     "click" it from JavaScript instead of showing it. -->
 <input type="file" id="photoFile" accept="image/*" style="display:none" onchange="uploadPhoto()">
 
-<!-- The three cards:
-     Photo   — the uploaded photo
-     Twin 01 — the photo warped flat, seen from directly above
-     Twin 02 — the blueprint: a dimensioned drawing of Twin 01 -->
 <main>
 
-  <!-- Card 1: the uploaded photo -->
   <section class="card">
     <header><h2>Photo</h2><span class="spacer"></span>
       <button class="icon-btn" onclick="openLightbox('photo')" title="Expand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
       <span class="menu-wrap"><button class="icon-btn" onclick="toggleMenu('menuPhoto', event)" title="More"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></button>
       <span class="menu" id="menuPhoto"><a href="/uploaded.jpg" download="photo.jpg">Download photo</a><a href="#" onclick="openLightbox('photo'); return false;">Expand</a></span></span>
     </header>
-    <!-- Clicking the frame opens the file picker (or the full-screen
-         view once a photo is loaded). Files can also be dropped here. -->
+
     <div class="body"><div class="frame" id="photoFrame" onclick="photoFrameClick()">
       <img id="photoImg" src="" alt="" style="display:none">
       <span class="empty" id="photoEmpty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5L6 23"/></svg>Upload or drop a photo to start</span>
@@ -438,8 +394,6 @@
     <footer id="photoMeta"></footer>
   </section>
 
-  <!-- Card 2: Twin 01, the warped top-down image.
-       Its footer holds the Measure tool, the grid switch and the sizes. -->
   <section class="card">
     <header><h2>Twin 01</h2><span class="spacer"></span>
       <button class="icon-btn" onclick="openLightbox('twin')" title="Expand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
@@ -448,15 +402,13 @@
     </header>
     <div class="body"><div class="frame" id="twinFrame" onclick="twinFrameClick(event)">
       <img id="photoTwinImg" src="" alt="" style="display:none">
-      <!-- The measure tool draws its lines on this SVG layer -->
+
       <svg id="measureSvg"></svg>
       <span class="empty" id="twinEmpty">Calibrate to generate the twin</span>
     </div></div>
     <footer><span id="twinMeta"></span><span id="measureMeta"></span><span class="spacer"></span><button class="mini-btn" id="measureBtn" onclick="toggleMeasure()">Measure</button><button class="mini-btn" id="measureClearBtn" onclick="clearMeasurements()" style="display:none">Clear</button><label><input type="checkbox" id="gridChk" checked onchange="toggleGrid()"> Grid</label></footer>
   </section>
 
-  <!-- Card 3: Twin 02, the blueprint.
-       Its footer holds the mm / cm / m unit switch. -->
   <section class="card">
     <header><h2>Twin 02</h2><span class="spacer"></span>
       <button class="icon-btn" onclick="openLightbox('blueprint')" title="Expand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>
@@ -475,35 +427,27 @@
   </section>
 </main>
 
-<!-- Calibrate panel. Hidden until a photo is uploaded.
-     The user picks the reference (A4 sheet or 30 cm scale),
-     checks the corner points on the canvas, then presses Generate. -->
 <section id="calib">
   <h3>Calibrate — click in order</h3>
 
-  <!-- The reference: an A4 sheet of known size, or a 30 cm scale -->
   <p>
     <span class="seg">
       <label><input type="radio" name="refMode" value="a4" checked onchange="setRefMode()"> A4 sheet · 210 × 297 mm</label><label><input type="radio" name="refMode" value="scale" onchange="setRefMode()"> 30 cm scale</label>
     </span>
   </p>
 
-  <!-- A4 mode: the sheet's real size in mm -->
   <p id="refFieldsA4">
     <label>Width (mm) <input id="pwMm" type="number" value="210" style="width:80px"></label>
     <label>Height (mm) <input id="phMm" type="number" value="297" style="width:80px"></label>
   </p>
 
-  <!-- Scale mode: the known length of the scale in the photo -->
   <p id="refFieldsScale" style="display:none">
     <label>Scale length (mm) <input id="rulerMm" type="number" value="300" style="width:80px"></label>
     <span style="color:#8b8b99">Place the scale flat beside the object, in the same plane, fully in frame.</span>
   </p>
 
-  <!-- The object's name, printed on the blueprint's title block -->
   <p><label>Object <input id="photoTitle" type="text" value="" placeholder="e.g. Submarine" style="width:160px"></label></p>
 
-  <!-- The photo, on a canvas, with the points drawn on it -->
   <div class="calib-wrap">
     <canvas id="photoCanvas"></canvas>
   </div>
@@ -521,14 +465,11 @@
     <button onclick="closePhotoCalib()">Close</button>
   </div>
 
-  <!-- The warped preview appears here -->
   <div id="previewBox"></div>
 </section>
 
-<!-- Status messages are written into this line -->
 <div id="msg"></div>
 
-<!-- Bottom bar: the uploaded file's name, and the export buttons -->
 <div class="bottombar">
   <span class="file-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.5-3.5L6 23"/></svg><span id="fileName">No file selected</span></span>
   <span class="spacer"></span>
@@ -536,7 +477,6 @@
   <a class="btn primary" href="/photo_blueprint.jpg" download="blueprint.jpg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>Export Blueprint</a>
 </div>
 
-<!-- Full-screen view. JavaScript fills it with the clicked image. -->
 <div id="lightbox" onclick="if(event.target===this) closeLightbox()">
   <button id="lbClose" class="btn" onclick="closeLightbox()">Close ×</button>
   <div id="lbTitle"></div>
@@ -544,40 +484,18 @@
 </div>
 
 <script>
-/* ============================================================
-   Photo to 2D Digital Twin — page logic
 
-   The flow of the page:
-     1. The user uploads a photo (or drops it on the Photo card).
-     2. The Calibrate panel opens. The corner points are
-        auto-detected; the user can drag them to fix them.
-     3. Generate sends the points to the server. The server does
-        the maths (the perspective warp, the measurements) and
-        sends back Twin 01 and Twin 02.
+let photoClicks = [];
+let refMode = 'a4';
+let calibImg = null;
+let pendingAutoPoints = null;
+let pendingAutoRuler = null;
+let cursorPos = null;
+let dragIdx = -1;
+let downPos = null;
 
-   This file only handles the page: clicks, drawing the points,
-   and talking to the server with fetch().
-   ============================================================ */
-
-// ---------- Shared state ----------
-// Variables used by several functions live here at the top,
-// instead of inside one function.
-let photoClicks = [];        // the points placed on the calibration canvas
-let refMode = 'a4';          // which reference is in use: 'a4' or 'scale'
-let calibImg = null;         // the photo loaded into the calibration canvas
-let pendingAutoPoints = null;  // corners found by auto-detect, waiting to be placed
-let pendingAutoRuler = null;   // scale ends found by auto-detect
-let cursorPos = null;        // mouse position on the canvas (for dragging)
-let dragIdx = -1;            // which point is being dragged (-1 = none)
-let downPos = null;          // where the mouse went down (click vs drag test)
-
-// Show a status message in the line under the cards.
 function showMsg(t) { document.getElementById('msg').textContent = t; }
 
-// ---------- The stepper (1 Upload, 2 Calibrate, 3 Generate) ----------
-
-// Paint the 3 step pills for a stage: the current one is purple,
-// the finished ones get a tick.
 function setSteps(state) {
   const steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
   const lines = [document.getElementById('line1'), document.getElementById('line2')];
@@ -590,7 +508,6 @@ function setSteps(state) {
   lines.forEach((el, i) => el.classList.toggle('done', i + 2 <= state));
 }
 
-// Clicking a step pill jumps to that stage.
 function stepAction(n) {
   if (n === 1) { document.getElementById('photoFile').click(); }
   else if (n === 2) { openPhotoCalib(); }
@@ -601,35 +518,24 @@ function stepAction(n) {
   }
 }
 
-// Restart the fade-in animation on an image that just changed.
 function swapIn(el) {
   el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap');
 }
 
-// ---------- The cards' "..." menus ----------
-
-// Open or close one menu, closing the others.
 function toggleMenu(id, e) {
   e.stopPropagation();
   document.querySelectorAll('.menu.open').forEach(m => { if (m.id !== id) m.classList.remove('open'); });
   document.getElementById(id).classList.toggle('open');
 }
 
-// Clicking anywhere else closes any open menu.
 document.addEventListener('click', () => document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open')));
 
-// Clicking the Photo card: no photo yet -> open the file picker;
-// a photo is loaded -> open the full-screen view.
 function photoFrameClick() {
   const img = document.getElementById('photoImg');
   if (!img.src) document.getElementById('photoFile').click();
   else openLightbox('photo');
 }
 
-// ---------- Keeping the page in sync with the server ----------
-
-// Ask the server what stage we are at, and update the stepper
-// and the file name to match.
 async function refreshStatus() {
   const s = await (await fetch('/status')).json();
   setSteps(!s.photo_uploaded ? 1 : s.photo_calibrated ? 3 : 2);
@@ -637,12 +543,9 @@ async function refreshStatus() {
     document.getElementById('fileName').textContent = s.photo_filename || 'Photo uploaded';
   }
 }
-// Run once when the page loads, then again every 3 seconds.
+
 refreshStatus(); setInterval(refreshStatus, 3000);
 
-// ---------- Full-screen view (lightbox) ----------
-
-// Show one of the three images full-screen.
 function openLightbox(kind) {
   const lb = document.getElementById('lightbox'), inner = document.getElementById('lbInner');
   const title = document.getElementById('lbTitle');
@@ -660,18 +563,11 @@ function openLightbox(kind) {
 
 function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); }
 
-// Keyboard: Esc closes the lightbox (and leaves Measure mode).
-// Backspace, while calibrating, removes the last point.
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { closeLightbox(); if (measureMode) toggleMeasure(); }
   if (e.key === 'Backspace' && document.getElementById('calib').style.display === 'block') { e.preventDefault(); undoPhotoClick(); }
 });
 
-// ---------- Upload ----------
-
-// Send the chosen photo to the server, show it in the Photo card,
-// clear the old twin and blueprint, then run auto-detect.
-// The file comes from the file picker, or from a drag-and-drop.
 async function uploadPhoto(file) {
   const f = file || document.getElementById('photoFile').files[0];
   if (!f) return;
@@ -701,13 +597,6 @@ async function uploadPhoto(file) {
   }
 }
 
-// ---------- Drag and drop ----------
-// The Photo card frame is also a drop target: dropping an image
-// file on it uploads it, exactly like the file picker does.
-// dragDepth counts nested dragenter/dragleave events (the frame
-// has children) so the highlight does not flicker.
-// The two window handlers only stop the browser from opening
-// the file itself when a drop misses the frame.
 const photoFrame = document.getElementById('photoFrame');
 let dragDepth = 0;
 photoFrame.addEventListener('dragenter', (e) => {
@@ -731,18 +620,11 @@ photoFrame.addEventListener('drop', (e) => {
 window.addEventListener('dragover', (e) => { e.preventDefault(); });
 window.addEventListener('drop', (e) => { e.preventDefault(); });
 
-// ---------- Calibrating on the canvas ----------
-
-// Convert a mouse position on the canvas to image pixels
-// (the canvas is shown smaller than the photo really is).
 function canvasPos(e) {
   const c = document.getElementById('photoCanvas'), r = c.getBoundingClientRect();
   return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)];
 }
 
-// Redraw the photo and the numbered points on it, and rebuild
-// the list of point chips underneath. Points 1-4 are the object
-// corners (red); in scale mode, points 5-6 are the scale ends (cyan).
 function redrawCanvas() {
   const c = document.getElementById('photoCanvas');
   if (!calibImg) return;
@@ -768,9 +650,6 @@ function redrawCanvas() {
     (refMode === 'scale' && photoClicks.length < 4 ? ' — object corners first' : refMode === 'scale' && photoClicks.length < 6 ? ' — now the 2 scale ends' : '');
 }
 
-// Switch the reference between the A4 sheet and the 30 cm scale.
-// The placed points are cleared: the two modes count differently
-// (4 points for A4, 6 for the scale).
 function setRefMode() {
   refMode = document.querySelector('input[name="refMode"]:checked').value;
   document.getElementById('refFieldsA4').style.display = refMode === 'a4' ? 'block' : 'none';
@@ -779,9 +658,6 @@ function setRefMode() {
   redrawCanvas();
 }
 
-// Open the Calibrate panel and load the uploaded photo into the
-// canvas. If auto-detect found points, they are placed as soon as
-// the photo has loaded.
 async function openPhotoCalib() {
   photoClicks = []; dragIdx = -1; cursorPos = null;
   const s = await (await fetch('/status')).json();
@@ -809,10 +685,6 @@ function closePhotoCalib() { document.getElementById('calib').style.display = 'n
 function clearPhotoClicks() { photoClicks = []; document.getElementById('previewBox').innerHTML = ''; redrawCanvas(); }
 function undoPhotoClick() { photoClicks.pop(); document.getElementById('previewBox').innerHTML = ''; redrawCanvas(); }
 
-// Mouse on the canvas. Pressing near an existing point (within
-// 14 px) starts dragging it. A plain click adds a new point —
-// the mouseup handler tells a click from a drag by how far the
-// mouse moved: under 4 px is a click.
 const canvasEl = document.getElementById('photoCanvas');
 canvasEl.addEventListener('mousedown', (e) => {
   const [x, y] = canvasPos(e);
@@ -836,10 +708,6 @@ canvasEl.addEventListener('mouseup', (e) => {
   redrawCanvas();
 });
 
-// Build the request that Generate and Preview send to the server,
-// from the placed points and the form fields. The two modes send
-// different fields: A4 sends the sheet size, scale mode sends the
-// 4 corners plus the 2 scale ends and the scale's real length.
 function calibBody() {
   const title = document.getElementById('photoTitle').value;
   if (refMode === 'a4') {
@@ -852,8 +720,6 @@ function calibBody() {
       ruler_mm: +document.getElementById('rulerMm').value, title } };
 }
 
-// Preview: ask the server to warp the photo with the current
-// points and show the result, without applying anything.
 async function previewPhotoCalib() {
   const need = refMode === 'a4' ? 4 : 6;
   if (photoClicks.length !== need) { showMsg(`Select all ${need} points first, then Preview.`); return; }
@@ -867,24 +733,18 @@ async function previewPhotoCalib() {
   showMsg('Preview ready. If it looks right, Generate.');
 }
 
-// ---------- The Measure tool (on Twin 01) ----------
-// Click two points on the twin and it shows the real distance
-// between them: distance in pixels / px per mm = distance in mm.
 let measureMode = false;
-let measurements = [];       // finished measurements
-let pendingPoint = null;     // the first click, waiting for the second
-let measureHover = null;     // live second point, follows the mouse
-let twinPxPerMm = null;      // the twin's scale, set when results arrive
+let measurements = [];
+let pendingPoint = null;
+let measureHover = null;
+let twinPxPerMm = null;
 let twinSizePx = null;
 
-// A click on the twin frame: in Measure mode it measures,
-// otherwise it opens the full-screen view.
 function twinFrameClick(e) {
   if (measureMode) { measureClick(e); return; }
   openLightbox('twin');
 }
 
-// The Measure button in the Twin 01 footer.
 function toggleMeasure() {
   const img = document.getElementById('photoTwinImg');
   if (!img.src || !twinPxPerMm) { showMsg('Calibrate a photo first, then measure.'); return; }
@@ -896,7 +756,6 @@ function toggleMeasure() {
   renderMeasurements();
 }
 
-// Remove all measurements (also called when a new photo arrives).
 function clearMeasurements() {
   measurements = []; pendingPoint = null; measureHover = null;
   document.getElementById('measureClearBtn').style.display = 'none';
@@ -904,10 +763,6 @@ function clearMeasurements() {
   renderMeasurements();
 }
 
-// Convert a click on the displayed twin back to true twin pixels.
-// The image is letterboxed (object-fit: contain), so first the
-// empty bands around it are worked out and subtracted.
-// Clicks in the empty bands return null and are ignored.
 function twinPointFromEvent(e) {
   const img = document.getElementById('photoTwinImg');
   const r = img.getBoundingClientRect();
@@ -922,8 +777,6 @@ function twinPointFromEvent(e) {
   return [x, y];
 }
 
-// First click stores a point; the second click finishes the
-// measurement and adds it to the list.
 function measureClick(e) {
   const p = twinPointFromEvent(e);
   if (!p) return;
@@ -936,8 +789,6 @@ function measureClick(e) {
   renderMeasurements();
 }
 
-// Draw the measurement lines and labels on the SVG layer over
-// the twin, including the dashed live line while measuring.
 function renderMeasurements() {
   const svg = document.getElementById('measureSvg');
   const img = document.getElementById('photoTwinImg');
@@ -971,7 +822,6 @@ function renderMeasurements() {
   svg.innerHTML = s;
 }
 
-// While measuring, the dashed line follows the mouse.
 document.getElementById('twinFrame').addEventListener('mousemove', (e) => {
   if (!measureMode || !pendingPoint) return;
   const p = twinPointFromEvent(e);
@@ -980,22 +830,17 @@ document.getElementById('twinFrame').addEventListener('mousemove', (e) => {
   renderMeasurements();
 });
 
-// The window changed size: the lines must be redrawn to stay
-// exactly on top of the image.
 window.addEventListener('resize', () => { if (measureMode || measurements.length) renderMeasurements(); });
 
-// ---------- Units: mm, cm or m ----------
 let currentUnit = 'mm';
-let lastResults = null;      // the last Generate response, kept so the sizes can be re-written when the unit changes
+let lastResults = null;
 
-// Format a length (always stored in mm) in the chosen unit.
 function fmtLen(mm, unit) {
   if (unit === 'cm') return (mm / 10).toFixed(1) + ' cm';
   if (unit === 'm') return (mm / 1000).toFixed(2) + ' m';
   return Math.round(mm) + ' mm';
 }
 
-// Rewrite the card footers in the current unit.
 function renderSizes() {
   if (!lastResults) return;
   const bpi = lastResults.blueprint;
@@ -1009,9 +854,6 @@ function renderSizes() {
       `${measurements.length} measurement${measurements.length > 1 ? 's' : ''} · last ${fmtLen(measurements[measurements.length - 1].mm, currentUnit)}`;
 }
 
-// The unit switch in the Twin 02 footer. The server is told too,
-// because the labels printed on the blueprint itself change.
-// The blueprint image is then reloaded, and the sizes re-written.
 async function setUnit(u) {
   if (!['mm', 'cm', 'm'].includes(u)) return;
   currentUnit = u;
@@ -1022,9 +864,6 @@ async function setUnit(u) {
   renderMeasurements();
 }
 
-// ---------- Generate ----------
-
-// Show the twin and blueprint the server just made.
 function showResults(j) {
   twinPxPerMm = j.blueprint.px_per_mm;
   twinSizePx = j.twin_px;
@@ -1043,8 +882,6 @@ function showResults(j) {
   renderSizes();
 }
 
-// The Generate button: send the points to the server, then show
-// the results and scroll back up to the cards.
 async function applyPhotoCalib() {
   const need = refMode === 'a4' ? 4 : 6;
   if (photoClicks.length !== need) { showMsg(`Select all ${need} points first.`); return; }
@@ -1061,12 +898,6 @@ async function applyPhotoCalib() {
   }
 }
 
-// ---------- Auto-detect ----------
-
-// Ask the server to find the corners by itself (and, in scale
-// mode, the scale ends). The found points are placed when the
-// Calibrate panel opens. If nothing is found, the panel still
-// opens, so the user can click the corners by hand.
 async function autoDetect() {
   const r = await fetch('/photo_autodetect', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ mode: refMode }) });
   const j = await r.json();
@@ -1081,8 +912,6 @@ async function autoDetect() {
   }
 }
 
-// Calibrate from the 4 ArUco markers in the photo (ids 0-3 at the
-// corners) instead of clicked points.
 async function autoPhotoAruco() {
   const body = { width_mm: +document.getElementById('pwMm').value,
     height_mm: +document.getElementById('phMm').value, px_per_mm: 5,
@@ -1093,10 +922,6 @@ async function autoPhotoAruco() {
   if (j.ok) { showResults(j); refreshStatus(); }
 }
 
-// ---------- Grid on the twin ----------
-
-// The Grid checkbox in the Twin 01 footer. The grid is drawn by
-// the server, so the twin image is reloaded after switching.
 async function toggleGrid() {
   const chk = document.getElementById('gridChk');
   const v = chk.checked;
