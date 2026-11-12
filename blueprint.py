@@ -31,6 +31,28 @@ def _find_object_rects(twin, exclude_mask=None):
     sobx = cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3)
     soby = cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3)
     grad = np.sqrt(sobx ** 2 + soby ** 2)
+
+    def passes(c):
+        area = cv2.contourArea(c)
+        if not (0.003 * sheet_area < area < 0.95 * sheet_area):
+            return None
+        x, y, rw, rh = cv2.boundingRect(c)
+        if rw < 10 or rh < 10:
+            return None
+        if area < 0.3 * rw * rh:
+            return None
+        if rw > 0.9 * w and rh > 0.9 * h:
+            return None
+        pts = c.reshape(-1, 2)
+        if float(grad[pts[:, 1], pts[:, 0]].mean()) < 55:
+            return None
+        return (x, y, rw, rh)
+
+    def inter(a, b):
+        ix = max(0, min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]))
+        iy = max(0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
+        return ix * iy
+
     rects = []
     for mask in (255 - bw, bw):
         if exclude_mask is not None:
@@ -38,20 +60,9 @@ def _find_object_rects(twin, exclude_mask=None):
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL,
                                        cv2.CHAIN_APPROX_SIMPLE)
         for c in contours:
-            area = cv2.contourArea(c)
-            if not (0.008 * sheet_area < area < 0.95 * sheet_area):
-                continue
-            x, y, rw, rh = cv2.boundingRect(c)
-            if rw < 10 or rh < 10:
-                continue
-            if area < 0.3 * rw * rh:
-                continue
-            if rw > 0.9 * w and rh > 0.9 * h:
-                continue
-            pts = c.reshape(-1, 2)
-            if float(grad[pts[:, 1], pts[:, 0]].mean()) < 55:
-                continue
-            rects.append((x, y, rw, rh))
+            r = passes(c)
+            if r is not None:
+                rects.append(r)
     rects.sort(key=lambda r: r[2] * r[3], reverse=True)
     kept = []
     for r in rects:
@@ -59,6 +70,31 @@ def _find_object_rects(twin, exclude_mask=None):
                and abs(r[2] - k[2]) < 8 and abs(r[3] - k[3]) < 8 for k in kept):
             continue
         kept.append(r)
+
+    edges = cv2.Canny(gray, 25, 75)
+    if exclude_mask is not None:
+        edges = edges & ~exclude_mask
+    closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE,
+                              np.ones((15, 15), np.uint8))
+    contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL,
+                                   cv2.CHAIN_APPROX_SIMPLE)
+    extra = []
+    for c in contours:
+        r = passes(c)
+        if r is None:
+            continue
+        x, y, rw, rh = r
+        if rw <= 14 or rh <= 14:
+            continue
+        r = (x + 7, y + 7, rw - 14, rh - 14)
+        if any(inter(r, k) > 0.5 * k[2] * k[3] for k in kept):
+            continue
+        if any(inter(r, k) > 0.5 * min(r[2] * r[3], k[2] * k[3])
+               for k in extra):
+            continue
+        extra.append(r)
+    kept.extend(extra)
+    kept.sort(key=lambda r: r[2] * r[3], reverse=True)
     return kept
 
 
